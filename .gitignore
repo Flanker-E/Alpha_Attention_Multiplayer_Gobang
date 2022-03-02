@@ -1,2 +1,5 @@
 *.pyc
 __pycache__/
+best_policy.model
+current_policy.model
+/models

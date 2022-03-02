@@ -67,18 +67,28 @@ def run():
             policy_param = pickle.load(open(model_file, 'rb'),
                                        encoding='bytes')  # To support python3
         best_policy = PolicyValueNetNumpy(width, height, policy_param)
-        mcts_player = MCTSPlayer(best_policy.policy_value_fn,
+        mcts_player1 = MCTSPlayer(best_policy.policy_value_fn,
                                  c_puct=5,
                                  n_playout=400)  # set larger n_playout for better performance
-
+        mcts_player2 = MCTSPlayer(best_policy.policy_value_fn,
+                                 c_puct=5,
+                                 n_playout=400)  # set larger n_playout for better performance
+        mcts_player3 = MCTSPlayer(best_policy.policy_value_fn,
+                                 c_puct=5,
+                                 n_playout=400)
         # uncomment the following line to play with pure MCTS (it's much weaker even with a larger n_playout)
         # mcts_player = MCTS_Pure(c_puct=5, n_playout=1000)
 
         # human player, input your move in the format: 2,3
-        human = Human()
+        human1 = Human()
+        human2 = Human()
+        human3 = Human()
 
         # set start_player=0 for human first
-        game.start_play(human, mcts_player, start_player=1, is_shown=1)
+        # game.start_play(human, mcts_player, start_player=1, is_shown=1)
+        # game.start_play(mcts_player2, mcts_player, start_player=1, is_shown=1)
+        # game.start_play(human1, human2, human3, start_player=1, is_shown=1)
+        game.start_play(mcts_player1, mcts_player2, mcts_player3, start_player=1, is_shown=1)
     except KeyboardInterrupt:
         print('\n\rquit')
 
