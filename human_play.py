@@ -12,6 +12,8 @@ from game import Board, Game
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts_alphaZero import MCTSPlayer
 from policy_value_net_numpy import PolicyValueNetNumpy
+import argparse
+from pathlib import Path
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
 # from policy_value_net_pytorch import PolicyValueNet  # Pytorch
 # from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
@@ -46,10 +48,12 @@ class Human(object):
         return "Human {}".format(self.player)
 
 
-def run():
-    n = 5
-    width, height = 8, 8
-    model_file = 'best_policy_8_8_5.model'
+def run(opt):
+    n, number_player, board_size, save_dir, weights = \
+        opt.number_in_row, opt.number_player, opt.width, Path(opt.save_dir), opt.weights
+    # n = 5
+    width, height = board_size, board_size
+    model_file = save_dir / weights #'best_policy_8_8_5.model'
     try:
         board = Board(width=width, height=height, n_in_row=n)
         game = Game(board)
@@ -73,7 +77,8 @@ def run():
         mcts_player2 = MCTSPlayer(best_policy.policy_value_fn,
                                  c_puct=5,
                                  n_playout=400)  # set larger n_playout for better performance
-        mcts_player3 = MCTSPlayer(best_policy.policy_value_fn,
+        if(number_player==3):
+            mcts_player3 = MCTSPlayer(best_policy.policy_value_fn,
                                  c_puct=5,
                                  n_playout=400)
         # uncomment the following line to play with pure MCTS (it's much weaker even with a larger n_playout)
@@ -88,10 +93,20 @@ def run():
         # game.start_play(human, mcts_player, start_player=1, is_shown=1)
         # game.start_play(mcts_player2, mcts_player, start_player=1, is_shown=1)
         # game.start_play(human1, human2, human3, start_player=1, is_shown=1)
-        game.start_play(mcts_player1, mcts_player2, mcts_player3, start_player=1, is_shown=1)
+        if(number_player==3):
+            game.start_play(human1, mcts_player2, mcts_player3, start_player=1, is_shown=1)
     except KeyboardInterrupt:
         print('\n\rquit')
 
 
 if __name__ == '__main__':
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights','-w', type=str, default='best_policy.model', help='initial weights path')
+    parser.add_argument('--save_dir', type=str, default='models', help='save to project/name')
+    parser.add_argument('--number_player','-np', type=int, default=3, help='number of players')
+    parser.add_argument('--width', type=int, default=6, help='width of board')
+    parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition')
+    parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
+    opt = parser.parse_args()
+
+    run(opt)

@@ -98,7 +98,7 @@ class PolicyValueNetNumpy():
         legal_positions = board.availables
         current_state = board.current_state()
 
-        X = current_state.reshape(-1, 4, self.board_width, self.board_height)
+        X = current_state.reshape(-1, 6, self.board_width, self.board_height)
         # first 3 conv layers with ReLu nonlinearity
         for i in [0, 2, 4]:
             X = relu(conv_forward(X, self.params[i], self.params[i+1]))

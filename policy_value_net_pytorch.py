@@ -101,7 +101,7 @@ class PolicyValueNet():
         """
         legal_positions = board.availables
         current_state = np.ascontiguousarray(board.current_state().reshape(
-                -1, 4, self.board_width, self.board_height))
+                -1, 6, self.board_width, self.board_height)) #change from 4 to 6
         if self.use_gpu:
             log_act_probs, value = self.policy_value_net(
                     Variable(torch.from_numpy(current_state)).cuda().float())

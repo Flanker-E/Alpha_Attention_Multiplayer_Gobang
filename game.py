@@ -30,6 +30,7 @@ class Board(object):
         # keep available moves in a list
         self.availables = list(range(self.width * self.height))
         self.states = {}
+        self.last_last_move = -1
         self.last_move = -1
 
     def move_to_location(self, move):
@@ -65,16 +66,21 @@ class Board(object):
         if self.states:
             moves, players = np.array(list(zip(*self.states.items())))
             move_curr = moves[players == self.current_player]
-            move_oppo = moves[players != self.current_player]
+            move_oppo1 = moves[players == (self.current_player+1)%3]
+            move_oppo2 = moves[players == (self.current_player+2)%3]
             square_state[0][move_curr // self.width,
                             move_curr % self.height] = 1.0
-            square_state[1][move_oppo // self.width,
-                            move_oppo % self.height] = 1.0
+            square_state[1][move_oppo1 // self.width,
+                            move_oppo1 % self.height] = 1.0
+            square_state[2][move_oppo2 // self.width,
+                            move_oppo2 % self.height] = 1.0
             # indicate the last move location
-            square_state[2][self.last_move // self.width,
+            square_state[3][self.last_move // self.width,
                             self.last_move % self.height] = 1.0
-        if len(self.states) % 2 == 0:
-            square_state[3][:, :] = 1.0  # indicate the colour to play
+            square_state[4][self.last_last_move // self.width,
+                            self.last_last_move % self.height] = 1.0
+        if len(self.states) % 3 == 0:
+            square_state[5][:, :] = 1.0  # indicate the colour to play
         return square_state[:, ::-1, :]
 
     def do_move(self, move):
@@ -87,6 +93,7 @@ class Board(object):
             # self.players[0] if self.current_player == self.players[1]
             # else self.players[1]
         )
+        self.last_last_move = self.last_move
         self.last_move = move
 
     def has_a_winner(self):
@@ -192,11 +199,12 @@ class Game(object):
                 self.graphic(self.board, player1.player, player2.player, player3.player)
             end, winner = self.board.game_end()
             if end:
-                if is_shown:
-                    if winner != -1:
-                        print("Game end. Winner is", players[winner])
-                    else:
-                        print("Game end. Tie")
+                # if is_shown:
+                self.graphic(self.board, player1.player, player2.player, player3.player)
+                if winner != -1:
+                    print("Game end. Winner is", players[winner])
+                else:
+                    print("Game end. Tie")
                 return winner
 
     def start_self_play(self, player, is_shown=0, temp=1e-3):
