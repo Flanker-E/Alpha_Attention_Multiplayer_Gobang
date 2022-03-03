@@ -65,13 +65,16 @@ class TreeNode(object):
         # Update Q, a running average of values for all visits.
         self._Q += 1.0*(leaf_value - self._Q) / self._n_visits
 
-    def update_recursive(self, leaf_value):
+    def update_recursive(self, winner, cur_node_player):
         """Like a call to update(), but applied recursively for all ancestors.
         """
         # If it is not root, this node's parent should be updated first.
         if self._parent:
-            self._parent.update_recursive(-leaf_value)
-        self.update(leaf_value)
+            self._parent.update_recursive(winner,(cur_node_player+2)%3)
+        if(cur_node_player==winner):
+            self.update(2)
+        else:
+            self.update(-1)
 
     def get_value(self, c_puct):
         """Calculate and return the value for this node.
@@ -131,9 +134,11 @@ class MCTS(object):
         if not end:
             node.expand(action_probs)
         # Evaluate the leaf node by random rollout
-        leaf_value = self._evaluate_rollout(state)
+        # leaf_value, cur_player = self._evaluate_rollout(state)
+        win_player, cur_node_player = self._evaluate_rollout(state)
         # Update value and visit count of nodes in this traversal.
-        node.update_recursive(-leaf_value)
+        # node.update_recursive(-leaf_value)
+        node.update_recursive(win_player, (cur_node_player+2)%3)
 
     def _evaluate_rollout(self, state, limit=1000):
         """Use the rollout policy to play until the end of the game,
@@ -151,10 +156,14 @@ class MCTS(object):
         else:
             # If no break from the loop, issue a warning.
             print("WARNING: rollout reached move limit")
-        if winner == -1:  # tie
-            return 0
-        else:
-            return 1 if winner == player else -1
+        return winner, player
+        # if winner == -1:  # tie
+        #     return 0,player
+        # else:
+        #     if winner == player:
+        #         return 1,player 
+        #     else:
+        #         return -1,player
 
     def get_move(self, state):
         """Runs all playouts sequentially and returns the most visited action.

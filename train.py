@@ -34,7 +34,7 @@ class TrainPipeline():
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
         self.temp = 1.0  # the temperature param
-        self.n_playout = 400  # num of simulations for each move
+        self.n_playout = 800  # num of simulations for each move
         self.c_puct = 5
         self.buffer_size = 10000
         self.batch_size = 512  # mini-batch size for training
@@ -181,14 +181,14 @@ class TrainPipeline():
                 if (i+1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i+1))
                     win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model('./current_policy.model')
+                    self.policy_value_net.save_model('./current_policy_'+str(i+1)+'.model')
                     if win_ratio > self.best_win_ratio:
                         print("New best policy!!!!!!!!")
                         self.best_win_ratio = win_ratio
                         # update the best_policy
-                        self.policy_value_net.save_model('./best_policy.model')
+                        self.policy_value_net.save_model('./best_policy_'+str(i+1)+'.model')
                         if (self.best_win_ratio == 1.0 and
-                                self.pure_mcts_playout_num < 5000):
+                                self.pure_mcts_playout_num < 6000):
                             self.pure_mcts_playout_num += 1000
                             self.best_win_ratio = 0.0
         except KeyboardInterrupt:
@@ -205,5 +205,5 @@ if __name__ == '__main__':
     parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
     opt = parser.parse_args()
     model_file = Path(opt.save_dir) / opt.weights
-    training_pipeline = TrainPipeline(model_file)#'models/current_policy.model'
+    training_pipeline = TrainPipeline()#'models/current_policy.model'
     training_pipeline.run()
