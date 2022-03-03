@@ -16,13 +16,15 @@ from mcts_alphaZero import MCTSPlayer
 from policy_value_net_pytorch import PolicyValueNet  # Pytorch
 # from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
 # from policy_value_net_keras import PolicyValueNet # Keras
+import argparse
+from pathlib import Path
 
 
 class TrainPipeline():
     def __init__(self, init_model=None):
         # params of the board and the game
-        self.board_width = 6
-        self.board_height = 6
+        self.board_width = 8
+        self.board_height = 8
         self.n_in_row = 4
         self.board = Board(width=self.board_width,
                            height=self.board_height,
@@ -160,9 +162,9 @@ class TrainPipeline():
                                           is_shown=0)
             win_cnt[winner] += 1
         win_ratio = 1.0*(win_cnt[0] + 0.5*win_cnt[-1]) / n_games
-        print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(
+        print("num_playouts:{}, win: {}, lose 1: {}, lose 2: {}, tie:{}".format(
                 self.pure_mcts_playout_num,
-                win_cnt[0], win_cnt[1]+win_cnt[2], win_cnt[-1]))
+                win_cnt[0], win_cnt[1], win_cnt[2], win_cnt[-1]))
         return win_ratio
 
     def run(self):
@@ -194,5 +196,14 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline('models/current_policy.model')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights','-w', type=str, default='current_policy.model', help='initial weights path')
+    parser.add_argument('--save_dir', type=str, default='models', help='save to project/name')
+    parser.add_argument('--number_player','-np', type=int, default=3, help='number of players')
+    parser.add_argument('--width', type=int, default=6, help='width of board')
+    parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition')
+    parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
+    opt = parser.parse_args()
+    model_file = Path(opt.save_dir) / opt.weights
+    training_pipeline = TrainPipeline(model_file)#'models/current_policy.model'
     training_pipeline.run()

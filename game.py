@@ -201,6 +201,7 @@ class Game(object):
             if end:
                 # if is_shown:
                 self.graphic(self.board, player1.player, player2.player, player3.player)
+                print("Start player: ", start_player)
                 if winner != -1:
                     print("Game end. Winner is", players[winner])
                 else:
