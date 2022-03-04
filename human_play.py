@@ -55,6 +55,7 @@ def run():
     pure_mcts_playout_num=opt.pure_num
     mcts_playout_num=opt.alpha_num
     width, height = board_size, board_size
+    res_num = opt.res_num
     
     # print(model_file)
     try:
@@ -76,7 +77,10 @@ def run():
         # best_policy = PolicyValueNetNumpy(width, height, policy_param)
         if weights!='':
             model_file = Path(weights) #'best_policy_8_8_5.model'
-            best_policy = PolicyValueNet(width, height, model_file=model_file)
+            best_policy = PolicyValueNet(width, 
+                                        height, 
+                                        res_num=res_num, 
+                                        model_file=model_file)
             mcts_player1 = MCTSPlayer(best_policy.policy_value_fn,
                                     c_puct=5,
                                     n_playout=mcts_playout_num)  # set larger n_playout for better performance
@@ -115,13 +119,15 @@ def run():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights','-w', type=str, default='', help='initial weights path')
-    parser.add_argument('--number_player','-np', type=int, default=3, help='number of players')
-    parser.add_argument('--width', type=int, default=8, help='width of board')
-    parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition')
+    parser.add_argument('--weights','-w', type=str, default='', help='initial weights path, init empty, empty lead to pure MCTS, weight lead to Alpha MCTS')
+    parser.add_argument('--number_player','-np', type=int, default=3, help='number of players, init 3')
+    parser.add_argument('--width', type=int, default=6, help='width of board, init 6')
+    parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition, init 4')
     parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
-    parser.add_argument('--pure_num', type=int, default=2000, help='play out numbers of pure MCTS')
-    parser.add_argument('--alpha_num', type=int, default=1000, help='play out numbers of Alpha MCTS')
+    parser.add_argument('--pure_num', type=int, default=2000, help='play out numbers of pure MCTS, default 2000')
+    parser.add_argument('--alpha_num', type=int, default=1000, help='play out numbers of Alpha MCTS, default 1000')
+    
+    parser.add_argument('--res_num', type=int, default=0, help='res block num, init 0')
     opt = parser.parse_args()
 
     run()

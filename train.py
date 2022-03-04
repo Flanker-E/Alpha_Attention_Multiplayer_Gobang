@@ -48,15 +48,18 @@ class TrainPipeline():
         # num of simulations used for the pure mcts, which is used as
         # the opponent to evaluate the trained policy
         self.pure_mcts_playout_num = 1000
+        self.res_num = opt.res_num #init 0
         if init_model:
             # start training from an initial policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
+                                                   res_num = self.res_num,
                                                    model_file=init_model)
         else:
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
+                                                   self.board_height,
+                                                   res_num = self.res_num)
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn,
                                       c_puct=self.c_puct,
                                       n_playout=self.n_playout,
@@ -234,6 +237,7 @@ if __name__ == '__main__':
     parser.add_argument('--width', type=int, default=6, help='width of board, init 6')
     parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition, init 4')
     parser.add_argument('--n_playout', type=int, default=800, help='Alpha MCTS playout num, init 800')
+    parser.add_argument('--res_num', type=int, default=0, help='res block num, init 0')
     parser.add_argument('--check_freq', type=int, default=50, help='performance check freq, init 50')
     parser.add_argument('--init_playout', type=int, default=1000, help='initial pure MCTS playout, init 1000')
     parser.add_argument('--max_playout', type=int, default=9000, help='max pure MCTS playout, init 9000')
