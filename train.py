@@ -178,7 +178,7 @@ class TrainPipeline():
         try:
             # create dir
             desc='_'+str(opt.width)+'_'+str(opt.width)+'_'+str(opt.number_in_row)
-            dir = Path(opt.save_dir+desc)
+            dir = Path('models/'+opt.save_dir+desc)
             training_data=None
             evaluate_data=None
             if not dir.exists():

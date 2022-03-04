@@ -76,7 +76,7 @@ def run():
         # best_policy = PolicyValueNetNumpy(width, height, policy_param)
         if weights!='':
             model_file = Path(weights) #'best_policy_8_8_5.model'
-            best_policy = PolicyValueNet(width, height, model_file)
+            best_policy = PolicyValueNet(width, height, model_file=model_file)
             mcts_player1 = MCTSPlayer(best_policy.policy_value_fn,
                                     c_puct=5,
                                     n_playout=mcts_playout_num)  # set larger n_playout for better performance
