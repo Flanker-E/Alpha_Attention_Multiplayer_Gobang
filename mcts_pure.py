@@ -71,10 +71,13 @@ class TreeNode(object):
         # If it is not root, this node's parent should be updated first.
         if self._parent:
             self._parent.update_recursive(winner,(cur_node_player+2)%3)
-        if(cur_node_player==winner):
-            self.update(2)
+        if winner==-1:
+            self.update(0)
         else:
-            self.update(-1)
+            if(cur_node_player==winner):
+                self.update(1)
+            else:
+                self.update(-1)
 
     def get_value(self, c_puct):
         """Calculate and return the value for this node.

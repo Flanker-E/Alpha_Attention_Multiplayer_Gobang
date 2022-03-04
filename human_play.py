@@ -48,12 +48,12 @@ class Human(object):
         return "Human {}".format(self.player)
 
 
-def run(opt):
-    n, number_player, board_size, save_dir, weights, start_player= \
-        opt.number_in_row, opt.number_player, opt.width, Path(opt.save_dir), opt.weights, opt.start
+def run():
+    n, number_player, board_size, weights, start_player= \
+        opt.number_in_row, opt.number_player, opt.width, opt.weights, opt.start
     # n = 5
-    pure_mcts_playout_num=4000
-    mcts_playout_num=3000
+    pure_mcts_playout_num=opt.pure_num
+    mcts_playout_num=opt.alpha_num
     width, height = board_size, board_size
     
     # print(model_file)
@@ -75,7 +75,7 @@ def run(opt):
         #                                encoding='bytes')  # To support python3
         # best_policy = PolicyValueNetNumpy(width, height, policy_param)
         if weights!='':
-            model_file = save_dir / weights #'best_policy_8_8_5.model'
+            model_file = Path(weights) #'best_policy_8_8_5.model'
             best_policy = PolicyValueNet(width, height, model_file)
             mcts_player1 = MCTSPlayer(best_policy.policy_value_fn,
                                     c_puct=5,
@@ -116,11 +116,12 @@ def run(opt):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights','-w', type=str, default='', help='initial weights path')
-    parser.add_argument('--save_dir', type=str, default='models', help='save to project/name')
     parser.add_argument('--number_player','-np', type=int, default=3, help='number of players')
-    parser.add_argument('--width', type=int, default=6, help='width of board')
+    parser.add_argument('--width', type=int, default=8, help='width of board')
     parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition')
     parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
+    parser.add_argument('--pure_num', type=int, default=2000, help='play out numbers of pure MCTS')
+    parser.add_argument('--alpha_num', type=int, default=1000, help='play out numbers of Alpha MCTS')
     opt = parser.parse_args()
 
-    run(opt)
+    run()

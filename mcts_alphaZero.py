@@ -64,8 +64,8 @@ class TreeNode(object):
         # If it is not root, this node's parent should be updated first.
         if self._parent:
             self._parent.update_recursive(leaf_value,winner,(cur_node_player+2)%3)
-        if(node_player==root_player):
-            self.update(leaf_value)
+        if(cur_node_player==winner):
+            self.update(2*leaf_value)
         else:
             self.update(-leaf_value)
 
@@ -128,14 +128,16 @@ class MCTS(object):
         cur_node_player = state.get_current_player()
         if not end:
             node.expand(action_probs)
+            winner = cur_node_player
         else:
             # for end state，return the "true" leaf_value
             if winner == -1:  # tie
                 leaf_value = 0.0
             else:
-                leaf_value = (
-                    1.0 if winner == cur_node_player else -1.0
-                )
+                leaf_value = 1.0
+                # (
+                #     1.0 if winner == cur_node_player else -1.0
+                # )
 
         # Update value and visit count of nodes in this traversal.
         node.update_recursive(leaf_value, winner, (cur_node_player+2)%3)

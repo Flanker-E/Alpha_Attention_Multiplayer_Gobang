@@ -23,9 +23,9 @@ from pathlib import Path
 class TrainPipeline():
     def __init__(self, init_model=None):
         # params of the board and the game
-        self.board_width = 8
-        self.board_height = 8
-        self.n_in_row = 4
+        self.board_width = opt.width #default 6
+        self.board_height = opt.width
+        self.n_in_row = opt.number_in_row
         self.board = Board(width=self.board_width,
                            height=self.board_height,
                            n_in_row=self.n_in_row)
@@ -34,7 +34,7 @@ class TrainPipeline():
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
         self.temp = 1.0  # the temperature param
-        self.n_playout = 800  # num of simulations for each move
+        self.n_playout = opt.n_playout  # default 800 num of simulations for each move
         self.c_puct = 5
         self.buffer_size = 10000
         self.batch_size = 512  # mini-batch size for training
@@ -42,7 +42,7 @@ class TrainPipeline():
         self.play_batch_size = 1
         self.epochs = 5  # num of train_steps for each update
         self.kl_targ = 0.02
-        self.check_freq = 50
+        self.check_freq = opt.check_freq # default 50
         self.game_batch_num = 1500
         self.best_win_ratio = 0.0
         # num of simulations used for the pure mcts, which is used as
@@ -139,7 +139,13 @@ class TrainPipeline():
                         entropy,
                         explained_var_old,
                         explained_var_new))
-        return loss, entropy
+        ret_list = [kl,
+                        self.lr_multiplier,
+                        loss,
+                        entropy,
+                        explained_var_old,
+                        explained_var_new] 
+        return ret_list
 
     def policy_evaluate(self, n_games=10):
         """
@@ -165,30 +171,54 @@ class TrainPipeline():
         print("num_playouts:{}, win: {}, lose 1: {}, lose 2: {}, tie:{}".format(
                 self.pure_mcts_playout_num,
                 win_cnt[0], win_cnt[1], win_cnt[2], win_cnt[-1]))
-        return win_ratio
+        return win_ratio, win_cnt
 
     def run(self):
         """run the training pipeline"""
         try:
+            # create dir
+            desc='_'+str(opt.width)+'_'+str(opt.width)+'_'+str(opt.number_in_row)
+            dir = Path(opt.save_dir+desc)
+            training_data=None
+            evaluate_data=None
+            if not dir.exists():
+                dir.mkdir(parents=True, exist_ok=True)  # make directory
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
                 print("batch i:{}, episode_len:{}".format(
                         i+1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
-                    loss, entropy = self.policy_update()
+                    ret_list = self.policy_update()
+                    ret_list.insert(0,i)
+                else:
+                    ret_list=[i,0,0,0,0,0,0]
+                if training_data is None:
+                    training_data=np.array(ret_list).reshape(-1,len(ret_list))
+                else:
+                    training_data=np.concatenate((training_data,np.array(ret_list).reshape(-1,len(ret_list))),axis=0)
+                np.save(dir / 'training_data',training_data)
                 # check the performance of the current model,
                 # and save the model params
                 if (i+1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i+1))
-                    win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model('./current_policy_'+str(i+1)+'.model')
+                    win_ratio, win_cnt = self.policy_evaluate()
+                    # save data
+                    eva_list=np.array([i+1,self.pure_mcts_playout_num,win_ratio,win_cnt[0], win_cnt[1], win_cnt[2], win_cnt[-1]])
+                    if evaluate_data is None:
+                        evaluate_data=eva_list.reshape(-1,len(eva_list))
+                    else:
+                        evaluate_data=np.concatenate((evaluate_data,eva_list.reshape(-1,len(eva_list))),axis=0)
+                    np.save(dir / 'evaluate_data',evaluate_data)
+                    model_path = dir / ('current_policy_'+str(i+1)+'.model')
+                    self.policy_value_net.save_model(str(model_path))
                     if win_ratio > self.best_win_ratio:
                         print("New best policy!!!!!!!!")
                         self.best_win_ratio = win_ratio
                         # update the best_policy
-                        self.policy_value_net.save_model('./best_policy_'+str(i+1)+'.model')
+                        model_path = dir / ('best_policy_'+str(i+1)+'.model')
+                        self.policy_value_net.save_model(str(model_path))
                         if (self.best_win_ratio == 1.0 and
-                                self.pure_mcts_playout_num < 6000):
+                                self.pure_mcts_playout_num < opt.max_playout): # default 9000
                             self.pure_mcts_playout_num += 1000
                             self.best_win_ratio = 0.0
         except KeyboardInterrupt:
@@ -197,13 +227,20 @@ class TrainPipeline():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights','-w', type=str, default='current_policy.model', help='initial weights path')
-    parser.add_argument('--save_dir', type=str, default='models', help='save to project/name')
+    parser.add_argument('--weights','-w', type=str, default='', help='initial weights path')
+    parser.add_argument('--save_dir', type=str, default='models', help='save to save_dir+desc/xxxx, desc include width, num in row')
+    # parser.add_argument('--name', type=str, default='', help='save to save_dir/xxxx+name')
     parser.add_argument('--number_player','-np', type=int, default=3, help='number of players')
     parser.add_argument('--width', type=int, default=6, help='width of board')
     parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition')
-    parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
+    parser.add_argument('--n_playout', type=int, default=800, help='Alpha MCTS playout num')
+    parser.add_argument('--check_freq', type=int, default=50, help='performance check freq')
+    parser.add_argument('--init_playout', type=int, default=1000, help='initial pure MCTS playout')
+    parser.add_argument('--max_playout', type=int, default=9000, help='max pure MCTS playout')
+    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     opt = parser.parse_args()
-    model_file = Path(opt.save_dir) / opt.weights
-    training_pipeline = TrainPipeline()#'models/current_policy.model'
+    model_file=None
+    if opt.weights!='':
+        model_file = opt.weights
+    training_pipeline = TrainPipeline(model_file)
     training_pipeline.run()
