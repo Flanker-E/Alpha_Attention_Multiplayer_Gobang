@@ -227,17 +227,17 @@ class TrainPipeline():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights','-w', type=str, default='', help='initial weights path')
-    parser.add_argument('--save_dir', type=str, default='models', help='save to save_dir+desc/xxxx, desc include width, num in row')
+    parser.add_argument('--weights','-w', type=str, default='', help='initial weights path, init empty')
+    parser.add_argument('--save_dir', type=str, default='models', help='save to models/save_dir+desc/xxxx, desc include width, num in row, init model')
     # parser.add_argument('--name', type=str, default='', help='save to save_dir/xxxx+name')
-    parser.add_argument('--number_player','-np', type=int, default=3, help='number of players')
-    parser.add_argument('--width', type=int, default=6, help='width of board')
-    parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition')
-    parser.add_argument('--n_playout', type=int, default=800, help='Alpha MCTS playout num')
-    parser.add_argument('--check_freq', type=int, default=50, help='performance check freq')
-    parser.add_argument('--init_playout', type=int, default=1000, help='initial pure MCTS playout')
-    parser.add_argument('--max_playout', type=int, default=9000, help='max pure MCTS playout')
-    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
+    parser.add_argument('--number_player','-np', type=int, default=3, help='number of players, init 3')
+    parser.add_argument('--width', type=int, default=6, help='width of board, init 6')
+    parser.add_argument('--number_in_row','-n', type=int, default=4, help='win condition, init 4')
+    parser.add_argument('--n_playout', type=int, default=800, help='Alpha MCTS playout num, init 800')
+    parser.add_argument('--check_freq', type=int, default=50, help='performance check freq, init 50')
+    parser.add_argument('--init_playout', type=int, default=1000, help='initial pure MCTS playout, init 1000')
+    parser.add_argument('--max_playout', type=int, default=9000, help='max pure MCTS playout, init 9000')
+    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training, init False')
     opt = parser.parse_args()
     model_file=None
     if opt.weights!='':
