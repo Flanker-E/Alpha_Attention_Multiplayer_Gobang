@@ -112,7 +112,7 @@ def run():
         # game.start_play(human1, human2, human3, start_player=1, is_shown=1)
         if(number_player==3):
             # game.start_play(human1, pure_mcts_player1, pure_mcts_player2, start_player=start_player, is_shown=1)
-            game.start_play(human1, mcts_player2, mcts_player3, start_player=start_player, is_shown=1)
+            game.start_play(human1, mcts_player2, mcts_player3, start_player=start_player, is_shown=1, draw =opt.show_GUI)
     except KeyboardInterrupt:
         print('\n\rquit')
 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--start','-st', type=int, default=0, help='start number of players')
     parser.add_argument('--pure_num', type=int, default=2000, help='play out numbers of pure MCTS, default 2000')
     parser.add_argument('--alpha_num', type=int, default=1000, help='play out numbers of Alpha MCTS, default 1000')
-    
+    parser.add_argument('--show_GUI', nargs='?', const=True, default=False, help='draw GUI or not, default True')
     parser.add_argument('--res_num', type=int, default=0, help='res block num, init 0')
     opt = parser.parse_args()
 

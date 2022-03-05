@@ -75,7 +75,7 @@ class TreeNode(object):
             self.update(0)
         else:
             if(cur_node_player==winner):
-                self.update(1)
+                self.update(2)
             else:
                 self.update(-1)
 

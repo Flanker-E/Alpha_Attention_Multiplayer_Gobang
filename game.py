@@ -5,6 +5,7 @@
 
 from __future__ import print_function
 import numpy as np
+import tkinter
 
 
 class Board(object):
@@ -143,6 +144,13 @@ class Board(object):
     def get_current_player(self):
         return self.current_player
 
+class Point:
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.pixel_x = 30 + 30 * self.x
+        self.pixel_y = 30 + 30 * self.y
 
 class Game(object):
     """game server"""
@@ -150,34 +158,101 @@ class Game(object):
     def __init__(self, board, **kwargs):
         self.board = board
 
-    def graphic(self, board, player1, player2, player3):
+    def click1(self, event): #click1 because keyword repetition
+
+        current_player = self.board.get_current_player()
+        if current_player == 0:
+            i = (event.x) // 30
+            j = (event.y) // 30
+            ri = (event.x) % 30
+            rj = (event.y) % 30
+            i = i-1 if ri<15 else i
+            j = j-1 if rj<15 else j
+            move = self.board.location_to_move((i, j))
+            if move in self.board.availables:
+                self.cv.create_oval(self.chess_board_points[i][j].pixel_x-10, self.chess_board_points[i][j].pixel_y-10, self.chess_board_points[i][j].pixel_x+10, self.chess_board_points[i][j].pixel_y+10, fill='black')
+                self.board.do_move(move)
+
+    def run(self):
+        current_player = self.board.get_current_player()
+        
+        end, winner = self.board.game_end()
+        
+        if current_player != 0 and not end:
+            player_in_turn = self.players[current_player]
+            move = player_in_turn.get_action(self.board)
+            self.board.do_move(move)
+            i, j = self.board.move_to_location(move)
+            if(current_player == 1):
+                color='white'
+            else:
+                color='red'
+            self.cv.create_oval(self.chess_board_points[i][j].pixel_x-10, self.chess_board_points[i][j].pixel_y-10, self.chess_board_points[i][j].pixel_x+10, self.chess_board_points[i][j].pixel_y+10, fill=color)
+                
+        end, winner = self.board.game_end()
+        
+        if end:
+            if winner != -1:
+                self.cv.create_text(self.board.width*15+15, self.board.height*30+30, text="Game over. Winner is {}".format(self.players[winner]))
+                self.cv.unbind('<Button-1>')
+            else:
+                self.cv.create_text(self.board.width*15+15, self.board.height*30+30, text="Game end. Tie")
+
+            return winner
+        else:
+            self.cv.after(100, self.run)
+
+    def graphic(self, board, player1, player2, player3, draw=False):
         """Draw the board and show game info"""
         width = board.width
         height = board.height
 
-        print("Player", player1, "with X".rjust(3))
-        print("Player", player2, "with O".rjust(3))
-        print("Player", player3, "with 8".rjust(3))
-        print()
-        for x in range(width):
-            print("{0:8}".format(x), end='')
-        print('\r\n')
-        for i in range(height - 1, -1, -1):
-            print("{0:4d}".format(i), end='')
-            for j in range(width):
-                loc = i * width + j
-                p = board.states.get(loc, -1)
-                if p == player1:
-                    print('X'.center(8), end='')
-                elif p == player2:
-                    print('O'.center(8), end='')
-                elif p == player3:
-                    print('8'.center(8), end='')
-                else:
-                    print('_'.center(8), end='')
-            print('\r\n\r\n')
+        if draw:
+            window = tkinter.Tk()
+            self.cv = tkinter.Canvas(window, height=height*30+60, width=width*30 + 30, bg = 'white')
+            self.chess_board_points = [[None for i in range(height)] for j in range(width)]
 
-    def start_play(self, player1, player2, player3, start_player=0, is_shown=1):
+            for i in range(width):
+                for j in range(height):
+                    self.chess_board_points[i][j] = Point(i, j)
+            for i in range(width):  #vertical line
+                self.cv.create_line(self.chess_board_points[i][0].pixel_x, self.chess_board_points[i][0].pixel_y, self.chess_board_points[i][width-1].pixel_x, self.chess_board_points[i][width-1].pixel_y)
+            
+            for j in range(height):  #rizontal line
+                self.cv.create_line(self.chess_board_points[0][j].pixel_x, self.chess_board_points[0][j].pixel_y, self.chess_board_points[height-1][j].pixel_x, self.chess_board_points[height-1][j].pixel_y)        
+            print("Player", player1, "with white".rjust(3))
+            
+            self.button = tkinter.Button(window, text="start game!", command=self.run)
+            self.cv.bind('<Button-1>', self.click1)
+            print("Player", player2, "with O".rjust(3))
+            self.cv.pack()
+            self.button.pack()
+            print("Player", player3, "with 8".rjust(3))
+            window.mainloop()
+        else:
+            print("Player", player1, "with X".rjust(3))
+            print("Player", player2, "with O".rjust(3))
+            print("Player", player3, "with 8".rjust(3))
+            print()
+            for x in range(width):
+                print("{0:8}".format(x), end='')
+            print('\r\n')
+            for i in range(height - 1, -1, -1):
+                print("{0:4d}".format(i), end='')
+                for j in range(width):
+                    loc = i * width + j
+                    p = board.states.get(loc, -1)
+                    if p == player1:
+                        print('X'.center(8), end='')
+                    elif p == player2:
+                        print('O'.center(8), end='')
+                    elif p == player3:
+                        print('8'.center(8), end='')
+                    else:
+                        print('_'.center(8), end='')
+                print('\r\n\r\n')
+
+    def start_play(self, player1, player2, player3, start_player=0, is_shown=1, draw=False):
         """start a game between two players"""
         if start_player not in (0, 1, 2):
             raise Exception('start_player should be either 0 (player1 first) '
@@ -187,26 +262,29 @@ class Game(object):
         player1.set_player_ind(p1)
         player2.set_player_ind(p2)
         player3.set_player_ind(p3)
-        players = {p1: player1, p2: player2, p3: player3}
-        if is_shown:
-            self.graphic(self.board, player1.player, player2.player, player3.player)
-        while True:
-            current_player = self.board.get_current_player()
-            player_in_turn = players[current_player]
-            move = player_in_turn.get_action(self.board)
-            self.board.do_move(move)
+        self.players = {p1: player1, p2: player2, p3: player3}
+        if draw:
+            self.graphic(self.board, player1.player, player2.player, player3.player, draw)
+        else:
             if is_shown:
                 self.graphic(self.board, player1.player, player2.player, player3.player)
-            end, winner = self.board.game_end()
-            if end:
-                # if is_shown:
-                self.graphic(self.board, player1.player, player2.player, player3.player)
-                print("Start player: ", start_player)
-                if winner != -1:
-                    print("Game end. Winner is", players[winner])
-                else:
-                    print("Game end. Tie")
-                return winner
+            while True:
+                current_player = self.board.get_current_player()
+                player_in_turn = self.players[current_player]
+                move = player_in_turn.get_action(self.board)
+                self.board.do_move(move)
+                if is_shown:
+                    self.graphic(self.board, player1.player, player2.player, player3.player)
+                end, winner = self.board.game_end()
+                if end:
+                    # if is_shown:
+                    self.graphic(self.board, player1.player, player2.player, player3.player)
+                    print("Start player: ", start_player)
+                    if winner != -1:
+                        print("Game end. Winner is", self.players[winner])
+                    else:
+                        print("Game end. Tie")
+                    return winner
 
     def start_self_play(self, player, is_shown=0, temp=1e-3):
         """ start a self-play game using a MCTS player, reuse the search tree,
