@@ -223,7 +223,7 @@ class TrainPipeline():
                         # update the best_policy
                         model_path = dir / ('best_policy_'+str(i+1)+'.model')
                         self.policy_value_net.save_model(str(model_path))
-                        if (self.best_win_ratio == 1.0 and
+                        if (self.best_win_ratio >= 0.8 and
                                 self.pure_mcts_playout_num < opt.max_playout): # default 9000
                             self.pure_mcts_playout_num += 1000
                             self.best_win_ratio = 0.0
