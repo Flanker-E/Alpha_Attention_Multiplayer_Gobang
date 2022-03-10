@@ -43,7 +43,7 @@ class TrainPipeline():
         self.epochs = 5  # num of train_steps for each update
         self.kl_targ = 0.02
         self.check_freq = opt.check_freq # default 50
-        self.game_batch_num = 1500
+        self.game_batch_num = opt.max_batch
         self.best_win_ratio = 0.0
         # num of simulations used for the pure mcts, which is used as
         # the opponent to evaluate the trained policy
@@ -189,7 +189,10 @@ class TrainPipeline():
             evaluate_data=None
             if not dir.exists():
                 dir.mkdir(parents=True, exist_ok=True)  # make directory
-            for i in range(self.game_batch_num):
+            init_batch=0
+            if opt.resume:
+                init_batch=opt.init_batch
+            for i in range(init_batch, self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
                 print("batch i:{}, episode_len:{}".format(
                         i+1, self.episode_len))
@@ -244,8 +247,12 @@ if __name__ == '__main__':
     parser.add_argument('--check_freq', type=int, default=50, help='performance check freq, init 50')
     parser.add_argument('--init_playout', type=int, default=1000, help='initial pure MCTS playout, init 1000')
     parser.add_argument('--max_playout', type=int, default=9000, help='max pure MCTS playout, init 9000')
-    parser.add_argument('--use_gpu', nargs='?', const=True, default=False, help='using gpu, init False')
+
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training, init False')
+    parser.add_argument('--init_batch', type=int, default=0, help='initial batch number, init 0')
+    parser.add_argument('--max_batch', type=int, default=1500, help='max batch number, init 1500')
+    parser.add_argument('--use_gpu', nargs='?', const=True, default=False, help='using gpu, init False')
+    
     opt = parser.parse_args()
     model_file=None
     if opt.weights!='':
