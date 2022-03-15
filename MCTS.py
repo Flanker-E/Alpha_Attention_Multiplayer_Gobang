@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 from operator import itemgetter
-from sympy import expand
+# from sympy import expand
 
 def rollout_policy_fn(board):
     """a coarse, fast version of policy_fn used in the rollout phase."""
@@ -25,7 +25,7 @@ class MCTSPlayer(object):
     def get_action(self,board_state):
         available_move=board_state.availables
         if len(available_move)>0:
-            next_move=self.mcts.get_move(board_state)
+            next_move, _=self.mcts.get_move(board_state)
             self.mcts.update_with_move(-1)
             return next_move
         else:
@@ -58,8 +58,8 @@ class MCTS(object):
         for i in range(self._n_playout):
             cur_board_state=copy.deepcopy(board_state)
             self._playout(cur_board_state) 
-        move, _ =self._root.select(print=True)
-        return move
+        move, prob =self._root.select(print=True)
+        return move, prob
     
     def _playout(self,board_state):
         cur_node=self._root
@@ -93,9 +93,9 @@ class MCTS(object):
         for i in range(limit):
             available_move = board_state.availables
             if len(available_move)>0:
-                max_action=np.random.choice(available_move)
-                # action=rollout_policy_fn(board_state)
-                # max_action = max(action, key=itemgetter(1))[0]
+                # max_action=np.random.choice(available_move)
+                action=rollout_policy_fn(board_state)
+                max_action = max(action, key=itemgetter(1))[0]
                 board_state.do_move(max_action)
                 end,winner=board_state.game_end()
                 if end:
@@ -117,7 +117,7 @@ class TreeNode(object):
     def __init__(self, parent, p, num_player, c_puct=5) -> None:
         self.parent = parent
         self.children = {}  
-        self.n_visits = 0
+        self._n_visits = 0
         self._Q = 0
         self._U = 0
         self._P = p
@@ -130,16 +130,16 @@ class TreeNode(object):
                 self.children[action]=TreeNode(self, prior, self._num_player, self._c_puct)
         
 
-    def update_recursive(self,winner,cur_player):
+    def update_recursive(self,winner,cur_player, leaf_val=1):
         if self.parent!=None:
             self.parent.update_recursive(winner,(cur_player+(self._num_player-1))%self._num_player)
         if winner==-1:
             self.update(0)
         else:
             if winner==cur_player:
-                self.update(self._num_player-1)
+                self.update((self._num_player-1)*leaf_val)
             else:
-                self.update(-1)
+                self.update(-1*leaf_val)
     
     def is_leaf(self):
         return self.children=={}
@@ -149,13 +149,13 @@ class TreeNode(object):
         key=lambda act_dict: act_dict[1].get_value(toprint=print)) 
 
     def get_value(self,toprint=False):
-        self._U = self._c_puct*self._P*np.sqrt(self.parent.n_visits) / (1 + self.n_visits)
+        self._U = self._c_puct*self._P*np.sqrt(self.parent._n_visits) / (1 + self._n_visits)
         if(toprint):
-            print("Q",self._Q,"U",self._U,self.n_visits)
+            print("Q",self._Q,"U",self._U,self._n_visits)
         return self._U + self._Q
     
     def update(self, value):
-        self.n_visits+=1
+        self._n_visits+=1
         # if self.parent:
             
-        self._Q += 1.0*(value-self._Q) / self.n_visits
+        self._Q += 1.0*(value-self._Q) / self._n_visits

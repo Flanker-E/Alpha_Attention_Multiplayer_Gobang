@@ -105,6 +105,7 @@ class MCTS(object):
         self._policy = policy_value_fn
         self._c_puct = c_puct
         self._n_playout = n_playout
+        self.test=1
 
     def _playout(self, state):
         """Run a single playout from the root to the leaf, getting a value at
