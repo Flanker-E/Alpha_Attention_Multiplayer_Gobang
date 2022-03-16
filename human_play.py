@@ -18,7 +18,8 @@ from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
 import argparse
 from pathlib import Path
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
-from policy_value_net_pytorch import PolicyValueNet  # Pytorch
+# from policy_value_net_pytorch import PolicyValueNet  # Pytorch
+from Net_util_pytorch import PolicyValueNet
 # from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
 # from policy_value_net_keras import PolicyValueNet  # Keras
 

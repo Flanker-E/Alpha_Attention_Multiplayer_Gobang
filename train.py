@@ -13,7 +13,8 @@ from game import Board, Game
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts_alphaZero import MCTSPlayer
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
-from policy_value_net_pytorch import PolicyValueNet  # Pytorch
+# from policy_value_net_pytorch import PolicyValueNet  # Pytorch
+from Net_util_pytorch import PolicyValueNet
 # from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
 # from policy_value_net_keras import PolicyValueNet # Keras
 import argparse
@@ -108,6 +109,7 @@ class TrainPipeline():
         mcts_probs_batch = [data[1] for data in mini_batch]
         winner_batch = [data[2] for data in mini_batch]
         old_probs, old_v = self.policy_value_net.policy_value(state_batch)
+        # print(old_probs,old_v)
         for i in range(self.epochs):
             loss, entropy = self.policy_value_net.train_step(
                     state_batch,

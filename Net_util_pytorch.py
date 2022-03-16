@@ -1,3 +1,4 @@
+from matplotlib import use
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,38 +8,141 @@ import numpy as np
 
 
 class PolicyValueNet(object):
-    def __init__(self) -> None:
-        pass
+    def __init__(self,
+                 board_width,
+                 board_height,
+                 res_num,
+                 use_gpu=False,
+                 model_file='',
+                 player_num=3) -> None:
+        device = "cpu"
+        if use_gpu and torch.cuda.is_available():
+            print("using GPU!")
+            device = "cuda:0"
+        self.device = torch.device(device)
+        self.player_num = player_num
+        self.board_width = board_width
+        self.board_height = board_height
+        self.l2_const = 1e-4  # coef of l2 penalty
+
+        self.policy_value_net = Net(board_width, board_height, player_num,
+                                    res_num).to(self.device)
+        if model_file != '':
+            self.policy_value_net.load_state_dict(torch.load(model_file))
+
+        self.optimizer = optim.Adam(self.policy_value_net.parameters(),
+                                    weight_decay=self.l2_const)
 
     def policy_value(self, state_batch):
-        pass
+
+        input = torch.from_numpy(np.array(state_batch)).float().to(self.device)
+        probs_torch, value_torch = self.policy_value_net(input)
+        probs = np.exp(probs_torch.detach().cpu().numpy())
+        value = value_torch.detach().cpu().numpy()
+
+        return probs, value
 
     def policy_value_fn(self, board):
-        pass
+        available_move = board.availables
+
+        input = torch.from_numpy(board.current_state().copy()).float().to(
+            self.device).view(-1, self.player_num * 2, self.board_width,
+                              self.board_height)
+        probs_torch, value_torch = self.policy_value_net(input)
+        probs = np.exp(probs_torch.detach().cpu().numpy().flatten())
+        value = value_torch.item()
+        # print(np.shape(probs))
+        # print(np.shape(available_move))
+        act_probs = zip(available_move, probs[available_move])
+        return act_probs, value
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):
-        pass
+        self.optimizer.zero_grad()
 
-    def get_policy_param(self):
-        pass
+        for param in self.optimizer.param_groups:
+            param['lr'] = lr
+
+        state_batch = torch.from_numpy(np.array(state_batch)).float().to(
+            self.device)
+        mcts_probs = torch.from_numpy(np.array(mcts_probs)).float().to(
+            self.device)
+        winner_batch = torch.from_numpy(np.array(winner_batch)).float().to(
+            self.device)
+
+        log_prob_batch, val_batch = self.policy_value_net(state_batch)
+
+        loss_val = F.mse_loss(val_batch.view(-1), winner_batch)
+        loss_act = -torch.mean(torch.sum(mcts_probs * log_prob_batch, dim=1))
+        loss = loss_val + loss_act
+        loss.backward()
+        self.optimizer.step()
+        entropy = -torch.mean(
+            torch.sum(torch.exp(log_prob_batch) * log_prob_batch, dim=1))
+
+        return loss.item(), entropy.item()
+
+    # def get_policy_param(self):
+    #     pass
 
     def save_model(self, model_file):
-        pass
+        torch.save(self.policy_value_net.state_dict(), model_file)
 
 
-class Net(nn.modules):
-    def __init__(self) -> None:
+class Net(nn.Module):
+    def __init__(self, board_width, board_height, player_num, res_num) -> None:
         super().__init__()
-        pass
+        self.board_width = board_width
+        self.board_height = board_height
+        self.conv1 = nn.Conv2d(player_num * 2, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.resblocks = nn.Sequential(*(res_num * [ResBlock(128, 128)]))
+
+        self.act_conv1 = nn.Conv2d(128, 4, kernel_size=1)
+        self.act_fc1 = nn.Linear(4 * board_width * board_height,
+                                 board_width * board_height)
+
+        self.val_conv1 = nn.Conv2d(128, 2, kernel_size=1)
+        self.val_fc1 = nn.Linear(2 * board_width * board_height, 64)
+        self.val_fc2 = nn.Linear(64, 1)
 
     def forward(self, X):
-        pass
+        X = F.relu(self.conv1(X))
+        X = F.relu(self.conv2(X))
+        X = F.relu(self.conv3(X))
+        X = self.resblocks(X)
+
+        act_x = F.relu(self.act_conv1(X))
+        act_x = self.act_fc1(
+            act_x.view(-1, 4 * self.board_width * self.board_height))
+        act_x = F.log_softmax(act_x)
+
+        val_x = F.relu(self.val_conv1(X))
+        val_x = self.val_fc1(
+            val_x.view(-1, 2 * self.board_width * self.board_height))
+        val_x = self.val_fc2(val_x)
+        val_x = torch.tanh(val_x)
+
+        return act_x, val_x
 
 
-class ResBlock(nn.modules):
-    def __init__(self) -> None:
+class ResBlock(nn.Module):
+    def __init__(self, input_channel, output_channel) -> None:
         super().__init__()
-        pass
+        self.conv1 = nn.Conv2d(input_channel,
+                               output_channel,
+                               kernel_size=3,
+                               padding=1)
+        self.bn1 = nn.BatchNorm2d(output_channel)
+        self.conv2 = nn.Conv2d(output_channel,
+                               output_channel,
+                               kernel_size=3,
+                               padding=1)
+        self.bn2 = nn.BatchNorm2d(output_channel)
 
     def forward(self, X):
-        pass
+        output = self.conv1(X)
+        output = F.relu(self.bn1(output))
+        output = self.bn1(self.conv2(X))
+        output += X
+        return F.relu(output)
