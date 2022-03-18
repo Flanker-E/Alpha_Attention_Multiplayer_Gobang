@@ -36,11 +36,14 @@ class MCTSPlayerAlpha(MCTSPlayer):
     def get_action(self, board_state):
         available_move = board_state.availables
         if len(available_move) > 0:
+            next_move, probs = self.mcts.get_move(board_state)
             if self.self_play:
                 # dirichlet
-                pass
+                probs=0.75*probs+0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
+                next_move = np.random.choice(next_move, p=probs)
+                self.mcts.update_with_move(next_move)
             else:
-                next_move, probs = self.mcts.get_move(board_state)
+                # next_move, probs = self.mcts.get_move(board_state)
                 next_move = np.random.choice(next_move, p=probs)
                 self.mcts.update_with_move(-1)
             return next_move

@@ -1,4 +1,3 @@
-from matplotlib import use
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -44,7 +43,8 @@ class PolicyValueNet(object):
 
     def policy_value_fn(self, board):
         available_move = board.availables
-
+        # np.copy(), np.ascontiguousarray is also viable.
+        # For numpy may not store array contiguoutly(ndim >= 1) in memory (C order)
         input = torch.from_numpy(board.current_state().copy()).float().to(
             self.device).view(-1, self.player_num * 2, self.board_width,
                               self.board_height)
