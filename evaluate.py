@@ -5,13 +5,13 @@ import argparse
 from pathlib import Path
 from Net_util_pytorch import PolicyValueNet
 from collections import defaultdict
-
+import matplotlib.pyplot as plt
 
 # evaluate the model
 def evaluate(opt):
     n_in_row = opt.num_in_row
     num_player = opt.num_player
-    num_round = opt.num_round * num_player
+    num_round = opt.num_round
     board_size = opt.width
     width, height = board_size, board_size
     player1 = opt.player1
@@ -73,8 +73,9 @@ def round_play_test(game, num_round, player1, player2, player3):
                                  player2,
                                  player3,
                                  start_player=i % 3,
-                                 is_shown=0)
-    win_cnt[winner] += 1
+                                 is_shown=0,
+                                 show_end=0)
+        win_cnt[winner] += 1
     win_score = (3.0 * win_cnt[0] + 1.0 * win_cnt[-1]) / num_round
     print("score: {}, win: {}, lose 1: {}, lose 2: {}, tie:{}".format(
         win_score, win_cnt[0], win_cnt[1], win_cnt[2], win_cnt[-1]))
@@ -91,9 +92,10 @@ def create_player(width, height, player, weights, c_puct, res_num, n_playout):
                                          height,
                                          res_num=res_num,
                                          model_file=model_file)
-            current_player = MCTSPlayer(policy_value_fn=best_policy,
-                                        c_puct=c_puct,
-                                        n_playout=n_playout)
+            current_player = MCTSPlayer(
+                policy_value_fn=best_policy.policy_value_fn,
+                c_puct=c_puct,
+                n_playout=n_playout)
             print("player {}, res num: {}, n_playout: {}".format(
                 current_player, res_num, n_playout))
         elif player == 'pure_mcts':
