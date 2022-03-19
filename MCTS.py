@@ -65,7 +65,7 @@ class MCTS(object):
         for i in range(self._n_playout):
             cur_board_state = copy.deepcopy(board_state)
             self._playout(cur_board_state)
-        move, prob = self._root.select(print=True)
+        move, prob = self._root.select(print=False)
         return move, prob
 
     def _playout(self, board_state):

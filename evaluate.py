@@ -117,7 +117,7 @@ def create_player(width, height, player, weights, c_puct, res_num, n_playout):
         return current_player
 
     # # training data analysis
-    # parser.add_argument('--pharse', nargs='?', const=True, default=False, help='pharse training data or not, call default True')
+    # parser.add_argument('--analyze', nargs='?', const=True, default=False, help='analyze training data or not, call default True')
     # parser.add_argument('--weights
 
 
@@ -137,7 +137,7 @@ def create_player(width, height, player, weights, c_puct, res_num, n_playout):
 
 
 # plot the training data file
-def pharsing(opt):
+def analyze(opt):
 
     paths = re.split(r'\s*[,]\s*', opt.weights)
     num_path = len(paths)
@@ -153,39 +153,44 @@ def pharsing(opt):
     con_trainingdata = concate_traindata_list(trainingdata_list)
     index = con_trainingdata[0]
     loss = con_trainingdata[3]
+    plt.subplot(1, 2, 1)
     plt.plot(index, loss)
     plt.xlabel("num of batch")
     plt.ylabel("loss")
     plt.title("Loss")
-    plt.show()
-    plt.close()
+    # plt.show()
+    # plt.close()
     con_evaldata = concate_evaldata_list(evaldata_list)
     index = con_evaldata[0]
     playout_num = con_evaldata[1]
     # score=con_evaldata[2]*con_evaldata[1]
     score = [a * b for a, b in zip(con_evaldata[2], con_evaldata[1])]
+    print(opt.weights)
+    dirs = re.split(r',models\/|models\/', opt.weights)
+    plt.subplot(1, 2, 2)
     plt.step(index, playout_num, where='post', label="playout")
     plt.plot(index, score, label="score")
     plt.legend()
     plt.xlabel("num of batch")
     plt.ylabel("num of playout")
     plt.title("Playout number vs batch")
+    plt.suptitle("training info. form: "+ str(dirs))
     plt.show()
-    plt.close()
+    # plt.close()
 
 
 def concate_traindata_list(trainingdata_list):
     len_of_episode = len(trainingdata_list)
     if len_of_episode == 1:
         return list(np.transpose(trainingdata_list[0]))
-    con_trainingdata = [[] for i in range(len_of_episode)]
+    con_trainingdata = [[] for i in range(len(trainingdata_list[0][0]))]
 
     try:
         for i in range(len(trainingdata_list) - 1, 0, -1):
             front = trainingdata_list[i - 1]
             back = trainingdata_list[i]
 
-            if front[-1, 0] < back[0, 0]:
+            if front[-1, 0] < back[0, 0] or back[0, 0]==0:
                 raise Exception(
                     "the connection between {}(end at [{}]) and {}(begin at [{}]) dir may be wrong"
                     .format(i, front[-1, 0], i + 1, back[0, 0]))
@@ -226,7 +231,7 @@ def concate_evaldata_list(evaldata_list):
     len_of_episode = len(evaldata_list)
     if len_of_episode == 1:
         return list(np.transpose(evaldata_list[0]))
-    con_evaldata = [[] for i in range(len_of_episode)]
+    con_evaldata = [[] for i in range(len(evaldata_list[0][0]))]
 
     for i in range(len(evaldata_list) - 1, 0, -1):
         front = evaldata_list[i - 1]
@@ -299,10 +304,12 @@ if __name__ == '__main__':
                         default=0,
                         help='player2 res block num, init 0')
     parser.add_argument('--n_playout1',
+                        '-n1',
                         type=int,
                         default=1000,
                         help='play out numbers of player1, default 1000')
     parser.add_argument('--n_playout2',
+                        '-n2',
                         type=int,
                         default=1000,
                         help='play out numbers of player2, default 1000')
@@ -317,11 +324,11 @@ if __name__ == '__main__':
                         default=3,
                         help='number of rounds to play, init 3*num of player')
     # training data analysis
-    parser.add_argument('--pharse',
+    parser.add_argument('--analyze',
                         nargs='?',
                         const=True,
                         default=False,
-                        help='pharse training data or not, call default True')
+                        help='analyze training data or not, call default True')
     parser.add_argument(
         '--weights',
         '-ws',
@@ -335,5 +342,5 @@ if __name__ == '__main__':
 
     if opt.eval:
         evaluate(opt)
-    if opt.pharse:
-        pharsing(opt)
+    if opt.analyze:
+        analyze(opt)
