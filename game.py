@@ -252,7 +252,7 @@ class Game(object):
                         print('_'.center(8), end='')
                 print('\r\n\r\n')
 
-    def start_play(self, player1, player2, player3, start_player=0, is_shown=1, draw=False):
+    def start_play(self, player1, player2, player3, start_player=0, is_shown=0, show_end=1, draw=False):
         """start a game between two players"""
         if start_player not in (0, 1, 2):
             raise Exception('start_player should be either 0 (player1 first) '
@@ -277,8 +277,8 @@ class Game(object):
                     self.graphic(self.board, player1.player, player2.player, player3.player)
                 end, winner = self.board.game_end()
                 if end:
-                    # if is_shown:
-                    self.graphic(self.board, player1.player, player2.player, player3.player)
+                    if show_end or is_shown:
+                        self.graphic(self.board, player1.player, player2.player, player3.player)
                     print("Start player: ", start_player)
                     if winner != -1:
                         print("Game end. Winner is", self.players[winner])

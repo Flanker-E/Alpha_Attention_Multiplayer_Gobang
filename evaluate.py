@@ -1,3 +1,4 @@
+from cProfile import label
 from game import Board, Game
 from MCTS import MCTSPlayer as MCTS_Pure
 from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
@@ -5,7 +6,10 @@ import argparse
 from pathlib import Path
 from Net_util_pytorch import PolicyValueNet
 from collections import defaultdict
+import numpy as np
+import re
 import matplotlib.pyplot as plt
+
 
 # evaluate the model
 def evaluate(opt):
@@ -117,9 +121,126 @@ def create_player(width, height, player, weights, c_puct, res_num, n_playout):
     # parser.add_argument('--weights
 
 
+# training = [i,
+#             kl,
+#             self.lr_multiplier,
+#             loss,
+#             entropy,
+#             explained_var_old,
+#             explained_var_new]
+# eva_list = [i+1,
+#             self.pure_mcts_playout_num,
+#             win_ratio,win_cnt[0],
+#             win_cnt[1],
+#             win_cnt[2],
+#             win_cnt[-1]
+
+
 # plot the training data file
-def pharsing():
-    pass
+def pharsing(opt):
+
+    paths = re.split(r'\s*[,]\s*', opt.weights)
+    num_path = len(paths)
+    evaldata_list = []
+    trainingdata_list = []
+    for i in range(num_path):
+        cur_path = paths[i]
+        cur_path = Path(cur_path)
+        evaldata = np.load(cur_path / 'evaluate_data.npy')
+        trainingdata = np.load(cur_path / 'training_data.npy')
+        evaldata_list.append(evaldata)
+        trainingdata_list.append(trainingdata)
+    con_trainingdata = concate_traindata_list(trainingdata_list)
+    index = con_trainingdata[0]
+    loss = con_trainingdata[3]
+    plt.plot(index, loss)
+    plt.xlabel("num of batch")
+    plt.ylabel("loss")
+    plt.title("Loss")
+    plt.show()
+    plt.close()
+    con_evaldata = concate_evaldata_list(evaldata_list)
+    index = con_evaldata[0]
+    playout_num = con_evaldata[1]
+    # score=con_evaldata[2]*con_evaldata[1]
+    score = [a * b for a, b in zip(con_evaldata[2], con_evaldata[1])]
+    plt.step(index, playout_num, where='post', label="playout")
+    plt.plot(index, score, label="score")
+    plt.legend()
+    plt.xlabel("num of batch")
+    plt.ylabel("num of playout")
+    plt.title("Playout number vs batch")
+    plt.show()
+    plt.close()
+
+
+def concate_traindata_list(trainingdata_list):
+    len_of_episode = len(trainingdata_list)
+    if len_of_episode == 1:
+        return list(np.transpose(trainingdata_list[0]))
+    con_trainingdata = [[] for i in range(len_of_episode)]
+
+    try:
+        for i in range(len(trainingdata_list) - 1, 0, -1):
+            front = trainingdata_list[i - 1]
+            back = trainingdata_list[i]
+
+            if front[-1, 0] < back[0, 0]:
+                raise Exception(
+                    "the connection between {}(end at [{}]) and {}(begin at [{}]) dir may be wrong"
+                    .format(i, front[-1, 0], i + 1, back[0, 0]))
+            else:
+                if len(con_trainingdata[0]) == 0:
+                    for j in range(len(con_trainingdata)):
+                        con_trainingdata[j] = list(back[:, j])
+                con_index = 0
+                for j in range(len(front) - 1, 0, -1):
+                    # print(front[j,0],back[0,0])
+                    if front[j, 0] == back[0, 0]:
+                        con_index = int(j)
+                        break
+                for j in range(len(con_trainingdata)):
+                    temp_list_left = list(front[0:con_index, j])
+                    temp_list_left.extend(con_trainingdata[j])
+                    con_trainingdata[j] = temp_list_left
+
+    except Exception as e:
+        print(e)
+        con_trainingdata = [[] for i in range(len(trainingdata_list[0][0]))]
+        for i in range(len(trainingdata_list) - 1, 0, -1):
+            front = trainingdata_list[i - 1]
+            back = trainingdata_list[i]
+            if len(con_trainingdata[0]) == 0:
+                for j in range(len(con_trainingdata)):
+                    con_trainingdata[j] = list(back[:, j])
+
+            for j in range(len(con_trainingdata)):
+                temp_list_left = list(front[:, j])
+                temp_list_left.extend(con_trainingdata[j])
+                con_trainingdata[j] = temp_list_left
+        con_trainingdata[0] = list(range(len(con_trainingdata[0])))
+    return con_trainingdata
+
+
+def concate_evaldata_list(evaldata_list):
+    len_of_episode = len(evaldata_list)
+    if len_of_episode == 1:
+        return list(np.transpose(evaldata_list[0]))
+    con_evaldata = [[] for i in range(len_of_episode)]
+
+    for i in range(len(evaldata_list) - 1, 0, -1):
+        front = evaldata_list[i - 1]
+        back = evaldata_list[i]
+        if len(con_evaldata[0]) == 0:
+            for j in range(len(con_evaldata)):
+                con_evaldata[j] = list(back[:, j])
+
+        for j in range(len(con_evaldata)):
+            temp_list_left = list(front[:, j])
+            temp_list_left.extend(con_evaldata[j])
+            con_evaldata[j] = temp_list_left
+    con_evaldata[0] = [x * 50 for x in list(range(len(con_evaldata[0])))]
+    return con_evaldata
 
 
 if __name__ == '__main__':
@@ -203,7 +324,7 @@ if __name__ == '__main__':
                         help='pharse training data or not, call default True')
     parser.add_argument(
         '--weights',
-        '-w',
+        '-ws',
         type=str,
         default='',
         help=
