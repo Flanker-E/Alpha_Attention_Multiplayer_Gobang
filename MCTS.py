@@ -15,6 +15,7 @@ class MCTSPlayer(object):
     def __init__(self, **kwargs) -> None:
         who_play = kwargs.get('who_play', 'pure_MCTS')
         self.mcts = None
+        self.player = None
         if who_play == 'pure_MCTS':
             policy_value_fn = kwargs.get('policy_value_fn')
             c_puct = kwargs.get('c_puct', 5)

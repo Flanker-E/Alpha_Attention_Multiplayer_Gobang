@@ -1,3 +1,4 @@
+from ast import Num
 from cProfile import label
 from game import Board, Game
 from MCTS import MCTSPlayer as MCTS_Pure
@@ -106,7 +107,7 @@ def create_player(width, height, player, weights, c_puct, res_num, n_playout):
             current_player = MCTS_Pure(c_puct=c_puct, n_playout=n_playout)
             print("player {}, n_playout: {}".format(current_player, n_playout))
         elif player == 'min_max':
-            raise ValueError("don't finish yet")
+            raise ValueError("not finished yet")
         else:
             raise ValueError(
                 "should choose a kind of player from pure_mcts, alpha_mcts, min_max"
