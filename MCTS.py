@@ -25,6 +25,9 @@ class MCTSPlayer(object):
         # pass
     def set_player_ind(self, p):
         self.player = p
+    
+    def reset_player(self):
+        self.mcts.update_with_move(-1)
 
     def get_action(self, board_state):
         available_move = board_state.availables

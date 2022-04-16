@@ -33,10 +33,12 @@ class MCTSPlayerAlpha(MCTSPlayer):
                                   num_player,
                                   policy_value_fn=policy_value_fn)
 
-    def get_action(self, board_state):
+    def get_action(self, board_state, temp, return_prob=0):
         available_move = board_state.availables
+        move_probs = np.zeros(board_state.width*board_state.height)
         if len(available_move) > 0:
-            next_move, probs = self.mcts.get_move(board_state)
+            next_move, probs = self.mcts.get_move(board_state,temp)
+            move_probs[list(next_move)] = probs
             if self.self_play:
                 # dirichlet
                 probs=0.75*probs+0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
@@ -46,7 +48,11 @@ class MCTSPlayerAlpha(MCTSPlayer):
                 # next_move, probs = self.mcts.get_move(board_state)
                 next_move = np.random.choice(next_move, p=probs)
                 self.mcts.update_with_move(-1)
-            return next_move
+            # return next_move
+            if return_prob:
+                return next_move, move_probs
+            else:
+                return next_move
         else:
             print("board is full")
 

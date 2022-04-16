@@ -13,7 +13,8 @@ class PolicyValueNet(object):
                  res_num,
                  use_gpu=False,
                  model_file='',
-                 player_num=3) -> None:
+                 player_num=3,
+                 atten=False) -> None:
         device = "cpu"
         if use_gpu and torch.cuda.is_available():
             print("using GPU!")
@@ -24,10 +25,12 @@ class PolicyValueNet(object):
         self.board_height = board_height
         self.l2_const = 1e-4  # coef of l2 penalty
         
-        self.policy_value_net = Net(board_width, board_height, player_num,
+        if atten:
+            self.policy_value_net = MixVisionTransformer().to(self.device)
+        else:
+            self.policy_value_net = Net(board_width, board_height, player_num,
                                     res_num).to(self.device)
-        
-        self.policy_value_net = MixVisionTransformer()
+
         if model_file != '':
             self.policy_value_net.load_state_dict(torch.load(model_file))
 
