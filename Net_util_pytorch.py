@@ -4,7 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-
+from mix_transformer import *
 
 class PolicyValueNet(object):
     def __init__(self,
@@ -23,9 +23,11 @@ class PolicyValueNet(object):
         self.board_width = board_width
         self.board_height = board_height
         self.l2_const = 1e-4  # coef of l2 penalty
-
+        
         self.policy_value_net = Net(board_width, board_height, player_num,
                                     res_num).to(self.device)
+        
+        self.policy_value_net = MixVisionTransformer()
         if model_file != '':
             self.policy_value_net.load_state_dict(torch.load(model_file))
 
