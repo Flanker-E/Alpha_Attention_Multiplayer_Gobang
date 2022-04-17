@@ -23,6 +23,12 @@ class PolicyValueNet(object):
             print("using GPU!")
             device = "cuda:0"
         self.device = torch.device(device)
+        if atten:
+            print("pure attention")
+        else:
+            print("res block num: ",res_num)
+            print("attention block num: ",atten_num)
+        
         self.player_num = player_num
         self.board_width = board_width
         self.board_height = board_height
