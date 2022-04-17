@@ -6,6 +6,7 @@ from torch.autograd import Variable
 import numpy as np
 from mix_transformer import *
 
+
 class PolicyValueNet(object):
     def __init__(self,
                  board_width,
@@ -14,7 +15,8 @@ class PolicyValueNet(object):
                  use_gpu=False,
                  model_file='',
                  player_num=3,
-                 atten=False) -> None:
+                 atten=False,
+                 drop=0.) -> None:
         device = "cpu"
         if use_gpu and torch.cuda.is_available():
             print("using GPU!")
@@ -24,12 +26,14 @@ class PolicyValueNet(object):
         self.board_width = board_width
         self.board_height = board_height
         self.l2_const = 1e-4  # coef of l2 penalty
-        
+
         if atten:
-            self.policy_value_net = MixVisionTransformer().to(self.device)
+            self.policy_value_net = MixVisionTransformer(
+                drop_rate=drop, attn_drop_rate=drop,
+                drop_path_rate=drop).to(self.device)
         else:
             self.policy_value_net = Net(board_width, board_height, player_num,
-                                    res_num).to(self.device)
+                                        res_num).to(self.device)
 
         if model_file != '':
             self.policy_value_net.load_state_dict(torch.load(model_file))

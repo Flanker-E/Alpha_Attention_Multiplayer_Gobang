@@ -61,14 +61,16 @@ class TrainPipeline():
                                                    res_num=self.res_num,
                                                    use_gpu=use_gpu,
                                                    model_file=init_model,
-                                                   atten=self.atten)
+                                                   atten=self.atten,
+                                                   drop=opt.drop)
         else:
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
                                                    res_num=self.res_num,
                                                    use_gpu=use_gpu,
-                                                   atten=self.atten)
+                                                   atten=self.atten,
+                                                   drop=opt.drop)
         self.mcts_player = MCTSPlayer(policy_value_fn=self.policy_value_net.policy_value_fn,
                                       c_puct=self.c_puct,
                                       n_playout=self.n_playout,
@@ -309,7 +311,7 @@ if __name__ == '__main__':
                         help='initial batch number, init 0')
     parser.add_argument('--max_batch',
                         type=int,
-                        default=1500,
+                        default=3000,
                         help='max batch number, init 1500')
     parser.add_argument('--learn_rate',
                         '-lr',
@@ -330,6 +332,10 @@ if __name__ == '__main__':
                         const=True,
                         default=False,
                         help='using attention, init False')
+    parser.add_argument('--drop',
+                        type=float,
+                        default=0.,
+                        help='universal drop rate, init 0.')
 
     opt = parser.parse_args()
     model_file = None
