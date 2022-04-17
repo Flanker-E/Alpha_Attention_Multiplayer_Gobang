@@ -14,8 +14,8 @@ from timm.models.vision_transformer import _cfg
 # from mmseg.models.builder import BACKBONES
 # from mmseg.utils import get_root_logger
 import logging
-from mmcv.utils import get_logger
-from mmcv.runner import load_checkpoint
+# from mmcv.utils import get_logger
+# from mmcv.runner import load_checkpoint
 import math
 
 
@@ -256,10 +256,10 @@ class MixVisionTransformer(nn.Module):
             if m.bias is not None:
                 m.bias.data.zero_()
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
-            logger = get_root_logger()
-            load_checkpoint(self, pretrained, map_location='cpu', strict=False, logger=logger)
+    # def init_weights(self, pretrained=None):
+    #     if isinstance(pretrained, str):
+    #         logger = get_root_logger()
+    #         load_checkpoint(self, pretrained, map_location='cpu', strict=False, logger=logger)
 
     def reset_drop_path(self, drop_path_rate):
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(self.depths))]
@@ -330,25 +330,25 @@ class DWConv(nn.Module):
 #             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1],
 #             drop_rate=0.0, drop_path_rate=0.1)
 
-def get_root_logger(log_file=None, log_level=logging.INFO):
-    """Get the root logger.
+# def get_root_logger(log_file=None, log_level=logging.INFO):
+#     """Get the root logger.
 
-    The logger will be initialized if it has not been initialized. By default a
-    StreamHandler will be added. If `log_file` is specified, a FileHandler will
-    also be added. The name of the root logger is the top-level package name,
-    e.g., "mmseg".
+#     The logger will be initialized if it has not been initialized. By default a
+#     StreamHandler will be added. If `log_file` is specified, a FileHandler will
+#     also be added. The name of the root logger is the top-level package name,
+#     e.g., "mmseg".
 
-    Args:
-        log_file (str | None): The log filename. If specified, a FileHandler
-            will be added to the root logger.
-        log_level (int): The root logger level. Note that only the process of
-            rank 0 is affected, while other processes will set the level to
-            "Error" and be silent most of the time.
+#     Args:
+#         log_file (str | None): The log filename. If specified, a FileHandler
+#             will be added to the root logger.
+#         log_level (int): The root logger level. Note that only the process of
+#             rank 0 is affected, while other processes will set the level to
+#             "Error" and be silent most of the time.
 
-    Returns:
-        logging.Logger: The root logger.
-    """
+#     Returns:
+#         logging.Logger: The root logger.
+#     """
 
-    logger = get_logger(name='mmseg', log_file=log_file, log_level=log_level)
+#     logger = get_logger(name='mmseg', log_file=log_file, log_level=log_level)
 
-    return logger
+#     return logger

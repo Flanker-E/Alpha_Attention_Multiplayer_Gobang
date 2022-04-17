@@ -33,7 +33,7 @@ class MCTSPlayerAlpha(MCTSPlayer):
                                   num_player,
                                   policy_value_fn=policy_value_fn)
 
-    def get_action(self, board_state, temp, return_prob=0):
+    def get_action(self, board_state, temp=1e-3, return_prob=0):
         available_move = board_state.availables
         move_probs = np.zeros(board_state.width*board_state.height)
         if len(available_move) > 0:

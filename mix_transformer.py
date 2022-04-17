@@ -458,7 +458,7 @@ class MixVisionTransformer(nn.Module):
 
     def forward(self, x):
         x = self.forward_features(x)
-        val_x=x[-1].reshape(-1,x[-1].shape[1])
+        val_x = x[-1].reshape(-1, x[-1].shape[1])
         val_x = self.val_fc2(val_x)
         val_x = torch.tanh(val_x)
         act_x = self.seghead(x)
