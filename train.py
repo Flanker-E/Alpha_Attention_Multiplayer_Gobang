@@ -52,6 +52,7 @@ class TrainPipeline():
         # the opponent to evaluate the trained policy
         self.pure_mcts_playout_num = 1000
         self.res_num = opt.res_num  #init 0
+        self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         use_gpu = opt.use_gpu
         if init_model:
@@ -59,6 +60,7 @@ class TrainPipeline():
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
                                                    res_num=self.res_num,
+                                                   atten_num=self.atten_num,
                                                    use_gpu=use_gpu,
                                                    model_file=init_model,
                                                    atten=self.atten,
@@ -68,6 +70,7 @@ class TrainPipeline():
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
                                                    res_num=self.res_num,
+                                                   atten_num=self.atten_num,
                                                    use_gpu=use_gpu,
                                                    atten=self.atten,
                                                    drop=opt.drop)
@@ -287,6 +290,10 @@ if __name__ == '__main__':
                         type=int,
                         default=0,
                         help='res block num, init 0')
+    parser.add_argument('--atten_num',
+                        type=int,
+                        default=0,
+                        help='attention block num, init 0')
     parser.add_argument('--check_freq',
                         type=int,
                         default=50,
