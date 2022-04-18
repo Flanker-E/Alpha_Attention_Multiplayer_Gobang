@@ -457,11 +457,16 @@ class MixVisionTransformer(nn.Module):
         return outs
 
     def forward(self, x):
+        input = x.flatten(2)
         x = self.forward_features(x)
         val_x = x[-1].reshape(-1, x[-1].shape[1])
         val_x = self.val_fc2(val_x)
         val_x = torch.tanh(val_x)
         act_x = self.seghead(x)
+        with torch.no_grad():
+            for i in range(3):
+                act_x-=100* input[:,i]
+        act_x=F.log_softmax(act_x)
         # x = self.head(x)
 
         return act_x, val_x
@@ -564,11 +569,11 @@ class SegFormerHead(nn.Module):
 
         x = self.linear_fuse(torch.cat([_c4, _c3, _c2, _c1],
                                        dim=1)).squeeze(dim=1).flatten(1)
-        act_x = F.log_softmax(x)
+        
         # x = self.dropout(_c)
         # x = self.linear_pred(x)
 
-        return act_x
+        return x
 
 
 def resize(input,

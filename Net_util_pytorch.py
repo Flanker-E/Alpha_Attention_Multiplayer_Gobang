@@ -36,7 +36,7 @@ class PolicyValueNet(object):
 
         if atten:
             if board_width in [8, 11]:
-                if board_width is 8:
+                if board_width == 8:
                     self.policy_value_net = MixVisionTransformer(
                         drop_rate=drop,
                         attn_drop_rate=drop,
