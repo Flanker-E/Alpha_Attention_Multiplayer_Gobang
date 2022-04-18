@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from mix_transformer import *
+from mix_transformer_simple import MixVisionTransformer as MixSimple
 
 
 class PolicyValueNet(object):
@@ -37,7 +38,7 @@ class PolicyValueNet(object):
         if atten:
             if board_width in [8, 11]:
                 if board_width == 8:
-                    self.policy_value_net = MixVisionTransformer(
+                    self.policy_value_net = MixSimple(
                         drop_rate=drop,
                         attn_drop_rate=drop,
                         drop_path_rate=drop).to(self.device)

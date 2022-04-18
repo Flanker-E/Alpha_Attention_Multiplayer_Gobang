@@ -457,16 +457,16 @@ class MixVisionTransformer(nn.Module):
         return outs
 
     def forward(self, x):
-        with torch.no_grad():
-            input = x.clone().flatten(2)
+        # with torch.no_grad():
+        #     input = x.clone().flatten(2)
         x = self.forward_features(x)
         val_x = x[-1].reshape(-1, x[-1].shape[1])
         val_x = self.val_fc2(val_x)
         val_x = torch.tanh(val_x)
         act_x = self.seghead(x)
-        with torch.no_grad():
-            for i in range(3):
-                act_x-=100* input[:,i]
+        # with torch.no_grad():
+        #     for i in range(3):
+        #         act_x-=100* input[:,i]
         act_x=F.log_softmax(act_x)
         # x = self.head(x)
 

@@ -50,7 +50,7 @@ class TrainPipeline():
         self.best_win_ratio = 0.0
         # num of simulations used for the pure mcts, which is used as
         # the opponent to evaluate the trained policy
-        self.pure_mcts_playout_num = 1000
+        self.pure_mcts_playout_num = opt.init_playout
         self.res_num = opt.res_num  #init 0
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
@@ -65,6 +65,7 @@ class TrainPipeline():
                                                    model_file=init_model,
                                                    atten=self.atten,
                                                    drop=opt.drop)
+            print("NEW policyvaluenet load from weight file")
         else:
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
@@ -74,10 +75,12 @@ class TrainPipeline():
                                                    use_gpu=use_gpu,
                                                    atten=self.atten,
                                                    drop=opt.drop)
+            print("NEW policyvaluenet")
         self.mcts_player = MCTSPlayer(policy_value_fn=self.policy_value_net.policy_value_fn,
                                       c_puct=self.c_puct,
                                       n_playout=self.n_playout,
                                       is_selfplay=1)
+        print("NEW Alpha mcts player")
 
     def get_equi_data(self, play_data):
         """augment the data set by rotation and flipping
@@ -198,6 +201,7 @@ class TrainPipeline():
             init_batch = 0
             if opt.resume:
                 init_batch = opt.init_batch
+                print("resume from batch: ", init_batch)
             for i in range(init_batch, self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
                 print("batch i:{}, episode_len:{}".format(

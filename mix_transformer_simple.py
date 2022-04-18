@@ -19,7 +19,6 @@ import warnings
 import math
 
 
-
 class MixVisionTransformer(nn.Module):
     def __init__(self,
                  img_size=8,
@@ -29,6 +28,9 @@ class MixVisionTransformer(nn.Module):
                  embed_dims=[8, 16, 32, 64],
                  num_heads=[2, 2, 2, 1],
                  mlp_ratios=[2, 2, 1, 1],
+                 drop_rate=0.,
+                 attn_drop_rate=0.,
+                 drop_path_rate=0.,
                  qkv_bias=False,
                  qk_scale=None,
                  norm_layer=nn.LayerNorm,
@@ -73,7 +75,7 @@ class MixVisionTransformer(nn.Module):
                   norm_layer=norm_layer,
                   sr_ratio=sr_ratios[0]) for i in range(depths[0])
         ])
-        self.norm1 = norm_layer(embed_dims[0])
+        # self.norm1 = norm_layer(embed_dims[0])
 
         self.block2 = nn.ModuleList([
             Block(dim=embed_dims[1],
@@ -84,7 +86,7 @@ class MixVisionTransformer(nn.Module):
                   norm_layer=norm_layer,
                   sr_ratio=sr_ratios[1]) for i in range(depths[1])
         ])
-        self.norm2 = norm_layer(embed_dims[1])
+        # self.norm2 = norm_layer(embed_dims[1])
 
         self.block3 = nn.ModuleList([
             Block(dim=embed_dims[2],
@@ -95,7 +97,7 @@ class MixVisionTransformer(nn.Module):
                   norm_layer=norm_layer,
                   sr_ratio=sr_ratios[2]) for i in range(depths[2])
         ])
-        self.norm3 = norm_layer(embed_dims[2])
+        # self.norm3 = norm_layer(embed_dims[2])
 
         self.block4 = nn.ModuleList([
             Block(dim=embed_dims[3],
@@ -106,10 +108,10 @@ class MixVisionTransformer(nn.Module):
                   norm_layer=norm_layer,
                   sr_ratio=sr_ratios[3]) for i in range(depths[3])
         ])
-        self.norm4 = norm_layer(embed_dims[3])
-        self.val_fc2 = nn.Linear(64, 1)
+        # self.norm4 = norm_layer(embed_dims[3])
+        # self.val_fc2 = nn.Linear(64, 1)
 
-        self.seghead = SegFormerHead(embed_dims, embed_dim=64, num_classes=1)
+        self.dechead = DecoderHead(img_size, embed_dims)
         # classification head
         # self.head = nn.Linear(embed_dims[3], num_classes) if num_classes > 0 else nn.Identity()
 
@@ -134,7 +136,6 @@ class MixVisionTransformer(nn.Module):
     #     if isinstance(pretrained, str):
     #         logger = get_root_logger()
     #         load_checkpoint(self, pretrained, map_location='cpu', strict=False, logger=logger)
-
 
     def freeze_patch_emb(self):
         self.patch_embed1.requires_grad = False
@@ -161,7 +162,7 @@ class MixVisionTransformer(nn.Module):
         x, H, W = self.patch_embed1(x)
         for i, blk in enumerate(self.block1):
             x = blk(x, H, W)
-        x = self.norm1(x)
+        # x = self.norm1(x)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         outs.append(x)
 
@@ -169,7 +170,7 @@ class MixVisionTransformer(nn.Module):
         x, H, W = self.patch_embed2(x)
         for i, blk in enumerate(self.block2):
             x = blk(x, H, W)
-        x = self.norm2(x)
+        # x = self.norm2(x)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         outs.append(x)
 
@@ -177,7 +178,7 @@ class MixVisionTransformer(nn.Module):
         x, H, W = self.patch_embed3(x)
         for i, blk in enumerate(self.block3):
             x = blk(x, H, W)
-        x = self.norm3(x)
+        # x = self.norm3(x)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         outs.append(x)
 
@@ -185,7 +186,7 @@ class MixVisionTransformer(nn.Module):
         x, H, W = self.patch_embed4(x)
         for i, blk in enumerate(self.block4):
             x = blk(x, H, W)
-        x = self.norm4(x)
+        # x = self.norm4(x)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         outs.append(x)
 
@@ -193,13 +194,12 @@ class MixVisionTransformer(nn.Module):
 
     def forward(self, x):
         x = self.forward_features(x)
-        val_x = x[-1].reshape(-1, x[-1].shape[1])
-        val_x = self.val_fc2(val_x)
-        val_x = torch.tanh(val_x)
-        act_x = self.seghead(x)
+        # val_x = x[-1].reshape(-1, x[-1].shape[1])
+        # val_x = self.val_fc2(val_x)
+        # val_x = torch.tanh(val_x)
+        act_x, val_x = self.dechead(x)
 
         return act_x, val_x
-
 
 
 class OverlapPatchEmbed(nn.Module):
@@ -225,7 +225,7 @@ class OverlapPatchEmbed(nn.Module):
                               kernel_size=patch_size,
                               stride=stride,
                               padding=(patch_size[0] // 2, patch_size[1] // 2))
-        self.norm = nn.LayerNorm(embed_dim)
+        # self.norm = nn.LayerNorm(embed_dim)
 
         self.apply(self._init_weights)
 
@@ -248,7 +248,7 @@ class OverlapPatchEmbed(nn.Module):
         x = self.proj(x)
         _, _, H, W = x.shape
         x = x.flatten(2).transpose(1, 2)
-        x = self.norm(x)
+        # x = self.norm(x)
 
         return x, H, W
 
@@ -424,38 +424,31 @@ class Mlp(nn.Module):
         return x
 
 
-
 # @HEADS.register_module()
-class SegFormerHead(nn.Module):
+class DecoderHead(nn.Module):
     """
     SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
     """
-    def __init__(self, in_channels, embed_dim, num_classes, **kwargs):
+    def __init__(self, img_size, in_channels):
         super().__init__()
         # super(SegFormerHead, self).__init__(input_transform='multiple_select',
         #                                     **kwargs)
         self.in_channels = in_channels
-        # assert len(feature_strides) == len(self.in_channels)
-        # assert min(feature_strides) == feature_strides[0]
-        # self.feature_strides = feature_strides
+        self.board_width = img_size
+        self.board_height = img_size
+        embedding_dim = sum(self.in_channels)
 
-        c1_in_channels, c2_in_channels, c3_in_channels, c4_in_channels = self.in_channels
+        # self.linear_fuse = ConvModule(in_channels=embedding_dim,
+        #                               out_channels=num_classes,
+        #                               kernel_size=1,
+        #                               norm_cfg=dict(type='BN',
+        #                                             requires_grad=True))
+        self.act_conv1 = nn.Conv2d(embedding_dim, 4, kernel_size=1)
+        self.act_fc1 = nn.Linear(4 * img_size * img_size, img_size * img_size)
 
-        # decoder_params = kwargs['decoder_params']
-        embedding_dim = embed_dim
-
-        self.linear_c4 = MLP(input_dim=c4_in_channels, embed_dim=embedding_dim)
-        self.linear_c3 = MLP(input_dim=c3_in_channels, embed_dim=embedding_dim)
-        self.linear_c2 = MLP(input_dim=c2_in_channels, embed_dim=embedding_dim)
-        self.linear_c1 = MLP(input_dim=c1_in_channels, embed_dim=embedding_dim)
-
-        self.linear_fuse = ConvModule(in_channels=embedding_dim * 4,
-                                      out_channels=num_classes,
-                                      kernel_size=1,
-                                      norm_cfg=dict(type='BN',
-                                                    requires_grad=True))
-
-        # self.linear_pred = nn.Conv2d(embedding_dim, num_classes, kernel_size=1)
+        self.val_conv1 = nn.Conv2d(embedding_dim, 2, kernel_size=1)
+        self.val_fc1 = nn.Linear(2 * img_size * img_size, 64)
+        self.val_fc2 = nn.Linear(64, 1)
 
     def forward(self, inputs):
         # x = self._transform_inputs(inputs)  # len=4, 1/4,1/8,1/16,1/32
@@ -464,41 +457,46 @@ class SegFormerHead(nn.Module):
         ############## MLP decoder on C1-C4 ###########
         n, _, h, w = c4.shape
 
-        _c4 = self.linear_c4(c4).permute(0, 2,
-                                         1).reshape(n, -1, c4.shape[2],
-                                                    c4.shape[3])
-        _c4 = resize(_c4,
+        # _c4 = c4.permute(0, 2, 1).reshape(n, -1, c4.shape[2], c4.shape[3])
+        _c4 = resize(c4,
                      size=c1.size()[2:],
                      mode='bilinear',
-                     align_corners=False)
+                     align_corners=True)
 
-        _c3 = self.linear_c3(c3).permute(0, 2,
-                                         1).reshape(n, -1, c3.shape[2],
-                                                    c3.shape[3])
-        _c3 = resize(_c3,
+        # _c3 = c3.permute(0, 2, 1).reshape(n, -1, c3.shape[2], c3.shape[3])
+        _c3 = resize(c3,
                      size=c1.size()[2:],
                      mode='bilinear',
-                     align_corners=False)
+                     align_corners=True)
 
-        _c2 = self.linear_c2(c2).permute(0, 2,
-                                         1).reshape(n, -1, c2.shape[2],
-                                                    c2.shape[3])
-        _c2 = resize(_c2,
+        # _c2 = c2.permute(0, 2, 1).reshape(n, -1, c2.shape[2], c2.shape[3])
+        _c2 = resize(c2,
                      size=c1.size()[2:],
                      mode='bilinear',
-                     align_corners=False)
+                     align_corners=True)
 
-        _c1 = self.linear_c1(c1).permute(0, 2,
-                                         1).reshape(n, -1, c1.shape[2],
-                                                    c1.shape[3])
+        # _c1 = c1.permute(0, 2, 1).reshape(n, -1, c1.shape[2], c1.shape[3])
+        _c1 = c1
 
-        x = self.linear_fuse(torch.cat([_c4, _c3, _c2, _c1],
-                                       dim=1)).squeeze(dim=1).flatten(1)
-        act_x = F.log_softmax(x)
-        # x = self.dropout(_c)
-        # x = self.linear_pred(x)
+        X = torch.cat([_c4, _c3, _c2, _c1], dim=1)
 
-        return act_x
+        act_x = F.relu(self.act_conv1(X))
+        act_x = self.act_fc1(
+            act_x.view(-1, 4 * self.board_width * self.board_height))
+        act_x = F.log_softmax(act_x)
+
+        val_x = F.relu(self.val_conv1(X))
+        val_x = self.val_fc1(
+            val_x.view(-1, 2 * self.board_width * self.board_height))
+        val_x = self.val_fc2(val_x)
+        val_x = torch.tanh(val_x)
+
+        # act_x = F.log_softmax(x)
+        # # x = self.dropout(_c)
+        # # x = self.linear_pred(x)
+        # val_x = self.val_fc2(val_x)
+        # val_x = torch.tanh(val_x)
+        return act_x, val_x
 
 
 class MLP(nn.Module):
