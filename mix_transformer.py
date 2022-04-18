@@ -457,7 +457,7 @@ class MixVisionTransformer(nn.Module):
         return outs
 
     def forward(self, x):
-        input = x.flatten(2)
+        input = x.clone().flatten(2)
         x = self.forward_features(x)
         val_x = x[-1].reshape(-1, x[-1].shape[1])
         val_x = self.val_fc2(val_x)
