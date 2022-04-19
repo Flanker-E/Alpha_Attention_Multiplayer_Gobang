@@ -56,6 +56,7 @@ class TrainPipeline():
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
+        atten_cad_blk_num=opt.atten_cad_blk_num
         if init_model:
             # start training from an initial policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
@@ -65,7 +66,8 @@ class TrainPipeline():
                                                    use_gpu=self.use_gpu,
                                                    model_file=init_model,
                                                    atten=self.atten,
-                                                   drop=opt.drop)
+                                                   drop=opt.drop,
+                                                   atten_cad_blk_num=atten_cad_blk_num)
             print("NEW policyvaluenet load from weight file")
         else:
             # start training from a new policy-value net
@@ -75,7 +77,8 @@ class TrainPipeline():
                                                    atten_num=self.atten_num,
                                                    use_gpu=self.use_gpu,
                                                    atten=self.atten,
-                                                   drop=opt.drop)
+                                                   drop=opt.drop,
+                                                   atten_cad_blk_num=atten_cad_blk_num)
             print("NEW policyvaluenet")
         self.mcts_player = MCTSPlayer(policy_value_fn=self.policy_value_net.policy_value_fn,
                                       c_puct=self.c_puct,
@@ -211,6 +214,7 @@ class TrainPipeline():
                 init_batch = opt.init_batch
                 print("resume from batch: ", init_batch)
             for i in range(init_batch, self.game_batch_num):
+                start_epoch = time.time()
                 self.collect_selfplay_data(self.play_batch_size)
                 print("batch i:{}, episode_len:{}".format(
                     i + 1, self.episode_len))
@@ -230,6 +234,10 @@ class TrainPipeline():
                 np.save(dir / 'training_data', training_data)
                 # check the performance of the current model,
                 # and save the model params
+                end_epoch = time.time()
+                elapsed = end_epoch - start_epoch
+                avg_time = elapsed* 1000
+                print("training epoch time {:.5f}ms".format(avg_time))
                 if (i + 1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
                     win_ratio, win_cnt = self.policy_evaluate()
@@ -355,6 +363,11 @@ if __name__ == '__main__':
                         type=float,
                         default=0.,
                         help='universal drop rate, init 0.')
+    parser.add_argument('--atten_cad_blk_num',
+                        '-blk_num',
+                        type=int,
+                        default=4,
+                        help='attention cascad block num, init 4')
 
     opt = parser.parse_args()
     model_file = None

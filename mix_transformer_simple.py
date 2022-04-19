@@ -36,20 +36,21 @@ class MixVisionTransformer(nn.Module):
                  norm_layer=nn.LayerNorm,
                  depths=[1, 1, 1, 1],
                  sr_ratios=[4, 2, 1, 1],
-                 blk_num=4):
+                 atten_cad_blk_num=4):
         super().__init__()
         self.num_classes = num_classes
         self.depths = depths
-        self.blk_num=blk_num
-        if blk_num != 3 and blk_num != 4:
+        self.blk_num=atten_cad_blk_num
+        if self.blk_num != 3 and self.blk_num != 4:
             raise ValueError("only support block number 3 or 4")
-        if blk_num == 3:
+        if self.blk_num == 3:
             img_size = img_size[0:-1]
             embed_dims = embed_dims[0:-1]
             num_heads = num_heads[0:-1]
             mlp_ratios = mlp_ratios[0:-1]
             depths = depths[0:-1]
             sr_ratios = sr_ratios[0:-1]
+        print("attention cascad block num: ",self.blk_num)
         # patch_embed
         self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
                                               patch_size=3,
@@ -66,7 +67,7 @@ class MixVisionTransformer(nn.Module):
                                               stride=2,
                                               in_chans=embed_dims[1],
                                               embed_dim=embed_dims[2])
-        if blk_num == 4:
+        if self.blk_num == 4:
             self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
                                                   patch_size=3,
                                                   stride=2,
@@ -109,7 +110,7 @@ class MixVisionTransformer(nn.Module):
                   sr_ratio=sr_ratios[2]) for i in range(depths[2])
         ])
         # self.norm3 = norm_layer(embed_dims[2])
-        if blk_num == 4:
+        if self.blk_num == 4:
             self.block4 = nn.ModuleList([
             Block(dim=embed_dims[3],
                   num_heads=num_heads[3],
