@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from mix_transformer import *
+from swin_transformer import *
 from mix_transformer_simple import MixVisionTransformer as MixSimple
 
 
@@ -36,6 +37,8 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  # coef of l2 penalty
 
         if atten:
+            # self.policy_value_net = MixVisionTransformer().to(self.device)
+            self.policy_value_net = SwinTransformer(img_size=8, patch_size=16, in_chans=6, num_classes=1000, embed_dim=8, depths=[2, 2, 2, 1], num_heads=[2, 2, 2, 1], window_size=4, mlp_ratios=2, qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1, norm_layer=nn.LayerNorm, ape=False, patch_norm=True).to(self.device)
             if board_width in [8, 11]:
                 if board_width == 8:
                     self.policy_value_net = MixSimple(
@@ -129,6 +132,7 @@ class Net(nn.Module):
               [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.resblocks = nn.Sequential(*(res_num * [ResBlock(128, 128)]))
+        # self.resblocks = WindowAttention(dim=128, window_size=to_2tuple(4), num_heads=3, qkv_bias=False, qk_scale=None, attn_drop=0, proj_drop=0)
         
 
         self.act_conv1 = nn.Conv2d(128, 4, kernel_size=1)
