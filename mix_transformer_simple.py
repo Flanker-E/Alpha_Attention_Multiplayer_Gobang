@@ -25,7 +25,7 @@ class MixVisionTransformer(nn.Module):
                  patch_size=16,
                  in_chans=6,
                  num_classes=1,
-                 embed_dims=[8, 16, 32, 64],
+                 embed_dims=[32, 32, 64, 64],
                  num_heads=[2, 2, 2, 1],
                  mlp_ratios=[2, 2, 1, 1],
                  drop_rate=0.,
