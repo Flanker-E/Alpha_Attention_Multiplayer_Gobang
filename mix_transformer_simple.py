@@ -21,7 +21,7 @@ import math
 
 class MixVisionTransformer(nn.Module):
     def __init__(self,
-                 img_size=[8,4,2,1],
+                 img_size=[8, 4, 2, 1],
                  patch_size=16,
                  in_chans=6,
                  num_classes=1,
@@ -35,11 +35,21 @@ class MixVisionTransformer(nn.Module):
                  qk_scale=None,
                  norm_layer=nn.LayerNorm,
                  depths=[1, 1, 1, 1],
-                 sr_ratios=[4, 2, 1, 1]):
+                 sr_ratios=[4, 2, 1, 1],
+                 blk_num=4):
         super().__init__()
         self.num_classes = num_classes
         self.depths = depths
-
+        self.blk_num=blk_num
+        if blk_num != 3 and blk_num != 4:
+            raise ValueError("only support block number 3 or 4")
+        if blk_num == 3:
+            img_size = img_size[0:-1]
+            embed_dims = embed_dims[0:-1]
+            num_heads = num_heads[0:-1]
+            mlp_ratios = mlp_ratios[0:-1]
+            depths = depths[0:-1]
+            sr_ratios = sr_ratios[0:-1]
         # patch_embed
         self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
                                               patch_size=3,
@@ -56,11 +66,12 @@ class MixVisionTransformer(nn.Module):
                                               stride=2,
                                               in_chans=embed_dims[1],
                                               embed_dim=embed_dims[2])
-        self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
-                                              patch_size=3,
-                                              stride=2,
-                                              in_chans=embed_dims[2],
-                                              embed_dim=embed_dims[3])
+        if blk_num == 4:
+            self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
+                                                  patch_size=3,
+                                                  stride=2,
+                                                  in_chans=embed_dims[2],
+                                                  embed_dim=embed_dims[3])
 
         # transformer encoder
         # dpr = [
@@ -98,8 +109,8 @@ class MixVisionTransformer(nn.Module):
                   sr_ratio=sr_ratios[2]) for i in range(depths[2])
         ])
         # self.norm3 = norm_layer(embed_dims[2])
-
-        self.block4 = nn.ModuleList([
+        if blk_num == 4:
+            self.block4 = nn.ModuleList([
             Block(dim=embed_dims[3],
                   num_heads=num_heads[3],
                   mlp_ratio=mlp_ratios[3],
@@ -111,7 +122,7 @@ class MixVisionTransformer(nn.Module):
         # self.norm4 = norm_layer(embed_dims[3])
         # self.val_fc2 = nn.Linear(64, 1)
 
-        self.dechead = DecoderHead(img_size, embed_dims)
+        self.dechead = DecoderHead(img_size, embed_dims, blk_num=self.blk_num)
         # classification head
         # self.head = nn.Linear(embed_dims[3], num_classes) if num_classes > 0 else nn.Identity()
 
@@ -181,14 +192,14 @@ class MixVisionTransformer(nn.Module):
         # x = self.norm3(x)
         x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
         outs.append(x)
-
-        # stage 4
-        x, H, W = self.patch_embed4(x)
-        for i, blk in enumerate(self.block4):
-            x = blk(x, H, W)
-        # x = self.norm4(x)
-        x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
-        outs.append(x)
+        if self.blk_num == 4:
+            # stage 4
+            x, H, W = self.patch_embed4(x)
+            for i, blk in enumerate(self.block4):
+                x = blk(x, H, W)
+            # x = self.norm4(x)
+            x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            outs.append(x)
 
         return outs
 
@@ -429,10 +440,11 @@ class DecoderHead(nn.Module):
     """
     SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
     """
-    def __init__(self, img_size, in_channels):
+    def __init__(self, img_size, in_channels, blk_num=4):
         super().__init__()
         # super(SegFormerHead, self).__init__(input_transform='multiple_select',
         #                                     **kwargs)
+        self.blk_num=blk_num
         self.in_channels = in_channels
         self.board_width = img_size[0]
         self.board_height = img_size[0]
@@ -444,7 +456,8 @@ class DecoderHead(nn.Module):
         #                               norm_cfg=dict(type='BN',
         #                                             requires_grad=True))
         self.act_conv1 = nn.Conv2d(embedding_dim, 4, kernel_size=1)
-        self.act_fc1 = nn.Linear(4 * img_size[0] * img_size[0], img_size[0] * img_size[0])
+        self.act_fc1 = nn.Linear(4 * img_size[0] * img_size[0],
+                                 img_size[0] * img_size[0])
 
         self.val_conv1 = nn.Conv2d(embedding_dim, 2, kernel_size=1)
         self.val_fc1 = nn.Linear(2 * img_size[0] * img_size[0], 64)
@@ -452,13 +465,17 @@ class DecoderHead(nn.Module):
 
     def forward(self, inputs):
         # x = self._transform_inputs(inputs)  # len=4, 1/4,1/8,1/16,1/32
-        c1, c2, c3, c4 = inputs
+        if self.blk_num==4:
+            c1, c2, c3, c4 = inputs
+        else:
+            c1, c2, c3 = inputs
 
         ############## MLP decoder on C1-C4 ###########
-        n, _, h, w = c4.shape
+        # n, _, h, w = c4.shape
 
         # _c4 = c4.permute(0, 2, 1).reshape(n, -1, c4.shape[2], c4.shape[3])
-        _c4 = resize(c4,
+        if self.blk_num==4:
+            _c4 = resize(c4,
                      size=c1.size()[2:],
                      mode='bilinear',
                      align_corners=True)
@@ -477,8 +494,10 @@ class DecoderHead(nn.Module):
 
         # _c1 = c1.permute(0, 2, 1).reshape(n, -1, c1.shape[2], c1.shape[3])
         _c1 = c1
-
-        X = torch.cat([_c4, _c3, _c2, _c1], dim=1)
+        if self.blk_num==4:
+            X = torch.cat([_c4, _c3, _c2, _c1], dim=1)
+        else:
+            X = torch.cat([_c3, _c2, _c1], dim=1)
 
         act_x = F.relu(self.act_conv1(X))
         act_x = self.act_fc1(
