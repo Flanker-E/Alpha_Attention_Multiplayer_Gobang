@@ -43,7 +43,7 @@ class PolicyValueNet(object):
                         attn_drop_rate=drop,
                         drop_path_rate=drop).to(self.device)
                 else:
-                    self.policy_value_net = MixVisionTransformer(
+                    self.policy_value_net = MixSimple(
                         img_size=[11, 6, 2, 1],
                         drop_rate=drop,
                         attn_drop_rate=drop,

@@ -21,7 +21,7 @@ import math
 
 class MixVisionTransformer(nn.Module):
     def __init__(self,
-                 img_size=8,
+                 img_size=[8,4,2,1],
                  patch_size=16,
                  in_chans=6,
                  num_classes=1,
@@ -41,22 +41,22 @@ class MixVisionTransformer(nn.Module):
         self.depths = depths
 
         # patch_embed
-        self.patch_embed1 = OverlapPatchEmbed(img_size=img_size,
+        self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
                                               patch_size=3,
                                               stride=1,
                                               in_chans=in_chans,
                                               embed_dim=embed_dims[0])
-        self.patch_embed2 = OverlapPatchEmbed(img_size=img_size // 2,
+        self.patch_embed2 = OverlapPatchEmbed(img_size=img_size[1],
                                               patch_size=3,
                                               stride=2,
                                               in_chans=embed_dims[0],
                                               embed_dim=embed_dims[1])
-        self.patch_embed3 = OverlapPatchEmbed(img_size=img_size // 4,
+        self.patch_embed3 = OverlapPatchEmbed(img_size=img_size[2],
                                               patch_size=3,
                                               stride=2,
                                               in_chans=embed_dims[1],
                                               embed_dim=embed_dims[2])
-        self.patch_embed4 = OverlapPatchEmbed(img_size=img_size // 8,
+        self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
                                               patch_size=3,
                                               stride=2,
                                               in_chans=embed_dims[2],
@@ -434,8 +434,8 @@ class DecoderHead(nn.Module):
         # super(SegFormerHead, self).__init__(input_transform='multiple_select',
         #                                     **kwargs)
         self.in_channels = in_channels
-        self.board_width = img_size
-        self.board_height = img_size
+        self.board_width = img_size[0]
+        self.board_height = img_size[0]
         embedding_dim = sum(self.in_channels)
 
         # self.linear_fuse = ConvModule(in_channels=embedding_dim,
@@ -444,10 +444,10 @@ class DecoderHead(nn.Module):
         #                               norm_cfg=dict(type='BN',
         #                                             requires_grad=True))
         self.act_conv1 = nn.Conv2d(embedding_dim, 4, kernel_size=1)
-        self.act_fc1 = nn.Linear(4 * img_size * img_size, img_size * img_size)
+        self.act_fc1 = nn.Linear(4 * img_size[0] * img_size[0], img_size[0] * img_size[0])
 
         self.val_conv1 = nn.Conv2d(embedding_dim, 2, kernel_size=1)
-        self.val_fc1 = nn.Linear(2 * img_size * img_size, 64)
+        self.val_fc1 = nn.Linear(2 * img_size[0] * img_size[0], 64)
         self.val_fc2 = nn.Linear(64, 1)
 
     def forward(self, inputs):
