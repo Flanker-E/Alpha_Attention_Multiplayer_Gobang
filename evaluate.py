@@ -273,7 +273,7 @@ def concate_evaldata_list(evaldata_list):
 
 
 def time_forward(opt):
-    num_epoch = 100
+    num_epoch = 600
     num_player = opt.num_player
     board_size = opt.width
     width, height = board_size, board_size
@@ -294,7 +294,7 @@ def time_forward(opt):
     device_list = [False]
     if torch.cuda.is_available():
         # print("using GPU!")
-        device_list = [True, False]
+        device_list = [False, True]
     for use_gpu in device_list:
         device = "cpu"
         if use_gpu:
@@ -313,10 +313,10 @@ def time_forward(opt):
                                atten=atten,
                                use_gpu=use_gpu)
         x = torch.rand(batch_num, 2 * num_player, height, width).to(device)
-        probs, _ = Net.policy_value_net(x)
-        print(np.shape(probs))
-        # train()  # run all operations once for cuda warm-up
+        
+        # train()  
         if use_gpu:
+            _, _ = Net.policy_value_net(x) # run all operations once for cuda warm-up
             torch.cuda.synchronize()  # wait for warm-up to finish
 
         times = []
@@ -334,32 +334,6 @@ def time_forward(opt):
         print("average forward time on {} is: {:.5f}ms, epoch number is: {}, batch num is: {}".format(
             device, avg_time, num_epoch, batch_num))
 
-        # create players
-
-    # Player1_2 = create_player(width, height, player1, weights1, c_puct1,
-    #                           res_num1, n_playout1)
-    # print("Create Player 2")
-    # Player2_1 = create_player(width, height, player2, weights2, c_puct2,
-    #                           res_num2, n_playout2)
-    # Player2_2 = create_player(width, height, player2, weights2, c_puct2,
-    #                           res_num2, n_playout2)
-
-    # begin test
-    # print("1 Player1 vs 2 Player2:")
-    # win_cnt1, win_score1 = round_play_test(game, num_round, Player1_1,
-    #                                        Player2_1, Player2_2)
-    # print("Player1 score: {}".format(win_score1))
-    # print("2 Player1 vs 1 Player2:")
-    # win_cnt2, win_score2 = round_play_test(game, num_round, Player2_1,
-    #                                        Player1_1, Player1_2)
-    # print("Player2 score: {}".format(win_score2))
-
-    # if (abs(win_score1 - win_score2) < 1.0):
-    #     print("Player1 and Player2's performance are close")
-    # elif (win_score1 < win_score2):
-    #     print("Player2 better than Player1")
-    # else:
-    #     print("Player1 better than Player2")
 
 
 if __name__ == '__main__':
