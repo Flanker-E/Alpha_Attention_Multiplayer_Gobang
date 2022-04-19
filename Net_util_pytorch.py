@@ -10,9 +10,9 @@ from mix_transformer_simple import MixVisionTransformer as MixSimple
 
 class PolicyValueNet(object):
     def __init__(self,
-                 board_width,
-                 board_height,
-                 res_num,
+                 board_width=8,
+                 board_height=8,
+                 res_num=0,
                  atten_num=0,
                  use_gpu=False,
                  model_file='',
@@ -157,7 +157,7 @@ class Net(nn.Module):
         act_x = F.relu(self.act_conv1(X))
         act_x = self.act_fc1(
             act_x.view(-1, 4 * self.board_width * self.board_height))
-        act_x = F.log_softmax(act_x)
+        act_x = F.log_softmax(act_x, dim=1)
 
         val_x = F.relu(self.val_conv1(X))
         val_x = self.val_fc1(

@@ -10,6 +10,7 @@ import random
 import numpy as np
 from collections import defaultdict, deque
 from game import Board, Game
+import time
 # from mcts_pure import MCTSPlayer as MCTS_Pure
 # from mcts_alphaZero import MCTSPlayer
 from MCTS import MCTSPlayer as MCTS_Pure
@@ -54,14 +55,14 @@ class TrainPipeline():
         self.res_num = opt.res_num  #init 0
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
-        use_gpu = opt.use_gpu
+        self.use_gpu = opt.use_gpu
         if init_model:
             # start training from an initial policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
                                                    res_num=self.res_num,
                                                    atten_num=self.atten_num,
-                                                   use_gpu=use_gpu,
+                                                   use_gpu=self.use_gpu,
                                                    model_file=init_model,
                                                    atten=self.atten,
                                                    drop=opt.drop)
@@ -72,7 +73,7 @@ class TrainPipeline():
                                                    self.board_height,
                                                    res_num=self.res_num,
                                                    atten_num=self.atten_num,
-                                                   use_gpu=use_gpu,
+                                                   use_gpu=self.use_gpu,
                                                    atten=self.atten,
                                                    drop=opt.drop)
             print("NEW policyvaluenet")
@@ -121,6 +122,9 @@ class TrainPipeline():
         state_batch = [data[0] for data in mini_batch]
         mcts_probs_batch = [data[1] for data in mini_batch]
         winner_batch = [data[2] for data in mini_batch]
+        print("shape of training data",np.shape(state_batch))
+
+        start_epoch = time.time()
         old_probs, old_v = self.policy_value_net.policy_value(state_batch)
         # print(old_probs,old_v)
         for i in range(self.epochs):
@@ -134,6 +138,10 @@ class TrainPipeline():
                        axis=1))
             if kl > self.kl_targ * 4:  # early stopping if D_KL diverges badly
                 break
+        end_epoch = time.time()
+        elapsed = end_epoch - start_epoch
+        avg_time = elapsed* 1000
+        print("training timg {:.5f}ms".format(avg_time))
         # adaptively adjust the learning rate
         if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
             self.lr_multiplier /= 1.5

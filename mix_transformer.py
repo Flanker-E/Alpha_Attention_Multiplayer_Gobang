@@ -467,7 +467,7 @@ class MixVisionTransformer(nn.Module):
         # with torch.no_grad():
         #     for i in range(3):
         #         act_x-=100* input[:,i]
-        act_x=F.log_softmax(act_x)
+        act_x=F.log_softmax(act_x, dim=1)
         # x = self.head(x)
 
         return act_x, val_x

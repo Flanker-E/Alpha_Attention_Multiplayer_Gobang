@@ -1,5 +1,7 @@
 from ast import Num
 from cProfile import label
+import torch
+import time
 from game import Board, Game
 from MCTS import MCTSPlayer as MCTS_Pure
 from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
@@ -43,14 +45,14 @@ def evaluate(opt):
     # create players
     print("Create Player 1")
     Player1_1 = create_player(width, height, player1, weights1, c_puct1,
-                              res_num1, n_playout1)
+                              n_playout1, res_num1)
     Player1_2 = create_player(width, height, player1, weights1, c_puct1,
-                              res_num1, n_playout1)
+                              n_playout1, res_num1)
     print("Create Player 2")
     Player2_1 = create_player(width, height, player2, weights2, c_puct2,
-                              res_num2, n_playout2)
+                              n_playout2, res_num2)
     Player2_2 = create_player(width, height, player2, weights2, c_puct2,
-                              res_num2, n_playout2)
+                              n_playout2, res_num2)
 
     # begin test
     print("1 Player1 vs 2 Player2:")
@@ -87,16 +89,34 @@ def round_play_test(game, num_round, player1, player2, player3):
     return win_cnt, win_score
 
 
-def create_player(width, height, player, weights, c_puct, res_num, n_playout):
+def create_player(width,
+                  height,
+                  player,
+                  weights,
+                  c_puct,
+                  n_playout,
+                  player_num=3,
+                  res_num=0,
+                  atten=False,
+                  atten_num=0,
+                  timing=False,
+                  use_gpu=False):
     try:
         if player == 'alpha_mcts':
-            if weights == '':
+            if weights == '' and not timing:
                 raise ValueError("need weight to initial alpha MCTS player")
-            model_file = Path(weights)  #'best_policy_8_8_5.model'
+            if weights != '':
+                model_file = Path(weights)  #'best_policy_8_8_5.model'
+            else:
+                model_file=''
             best_policy = PolicyValueNet(width,
                                          height,
                                          res_num=res_num,
-                                         model_file=model_file)
+                                         atten_num=atten_num,
+                                         use_gpu=use_gpu,
+                                         model_file=model_file,
+                                         player_num=player_num,
+                                         atten=atten)
             current_player = MCTSPlayer(
                 policy_value_fn=best_policy.policy_value_fn,
                 c_puct=c_puct,
@@ -115,7 +135,10 @@ def create_player(width, height, player, weights, c_puct, res_num, n_playout):
     except ValueError as e:
         print(repr(e))
     else:
-        return current_player
+        if timing:
+            return best_policy
+        else:
+            return current_player
 
     # # training data analysis
     # parser.add_argument('--analyze', nargs='?', const=True, default=False, help='analyze training data or not, call default True')
@@ -175,7 +198,7 @@ def analyze(opt):
     plt.xlabel("num of batch")
     plt.ylabel("num of playout")
     plt.title("Playout number vs batch")
-    plt.suptitle("training info. form: "+ str(dirs))
+    plt.suptitle("training info. form: " + str(dirs))
     plt.show()
     # plt.close()
 
@@ -191,7 +214,7 @@ def concate_traindata_list(trainingdata_list):
             front = trainingdata_list[i - 1]
             back = trainingdata_list[i]
 
-            if front[-1, 0] < back[0, 0] or back[0, 0]==0:
+            if front[-1, 0] < back[0, 0] or back[0, 0] == 0:
                 raise Exception(
                     "the connection between {}(end at [{}]) and {}(begin at [{}]) dir may be wrong"
                     .format(i, front[-1, 0], i + 1, back[0, 0]))
@@ -249,6 +272,96 @@ def concate_evaldata_list(evaldata_list):
     return con_evaldata
 
 
+def time_forward(opt):
+    num_epoch = 100
+    num_player = opt.num_player
+    board_size = opt.width
+    width, height = board_size, board_size
+    player = opt.player1
+    weights = ''
+    c_puct = 5
+    res_num = opt.res_num1
+    atten = opt.atten
+    atten_num = opt.atten_num1
+    n_playout = opt.n_playout1
+    batch_num = 512
+    # print("test batch num: ", 512)
+
+    # print(
+    #     "Board width* height: {}*{}, win condition: {}, round of test(total round*2*3 games): {}"
+    #     .format(width, height, n_in_row, num_round))
+
+    device_list = [False]
+    if torch.cuda.is_available():
+        # print("using GPU!")
+        device_list = [True, False]
+    for use_gpu in device_list:
+        device = "cpu"
+        if use_gpu:
+            device = "cuda:0"
+        # print("Create Player 1")
+        Net = create_player(width,
+                               height,
+                               player,
+                               weights,
+                               c_puct,
+                               n_playout,
+                               player_num=3,
+                               res_num=res_num,
+                               atten_num=atten_num,
+                               timing=opt.timing,
+                               atten=atten,
+                               use_gpu=use_gpu)
+        x = torch.rand(batch_num, 2 * num_player, height, width).to(device)
+        probs, _ = Net.policy_value_net(x)
+        print(np.shape(probs))
+        # train()  # run all operations once for cuda warm-up
+        if use_gpu:
+            torch.cuda.synchronize()  # wait for warm-up to finish
+
+        times = []
+        for e in range(num_epoch):
+            start_epoch = time.time()
+            # train()
+            _, _ = Net.policy_value_net(x)
+            if use_gpu:
+                torch.cuda.synchronize()
+            end_epoch = time.time()
+            elapsed = end_epoch - start_epoch
+            times.append(elapsed)
+
+        avg_time = sum(times) / num_epoch* 1000
+        print("average forward time on {} is: {:.5f}ms, epoch number is: {}, batch num is: {}".format(
+            device, avg_time, num_epoch, batch_num))
+
+        # create players
+
+    # Player1_2 = create_player(width, height, player1, weights1, c_puct1,
+    #                           res_num1, n_playout1)
+    # print("Create Player 2")
+    # Player2_1 = create_player(width, height, player2, weights2, c_puct2,
+    #                           res_num2, n_playout2)
+    # Player2_2 = create_player(width, height, player2, weights2, c_puct2,
+    #                           res_num2, n_playout2)
+
+    # begin test
+    # print("1 Player1 vs 2 Player2:")
+    # win_cnt1, win_score1 = round_play_test(game, num_round, Player1_1,
+    #                                        Player2_1, Player2_2)
+    # print("Player1 score: {}".format(win_score1))
+    # print("2 Player1 vs 1 Player2:")
+    # win_cnt2, win_score2 = round_play_test(game, num_round, Player2_1,
+    #                                        Player1_1, Player1_2)
+    # print("Player2 score: {}".format(win_score2))
+
+    # if (abs(win_score1 - win_score2) < 1.0):
+    #     print("Player1 and Player2's performance are close")
+    # elif (win_score1 < win_score2):
+    #     print("Player2 better than Player1")
+    # else:
+    #     print("Player1 better than Player2")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # evaluate
@@ -304,6 +417,19 @@ if __name__ == '__main__':
                         type=int,
                         default=0,
                         help='player2 res block num, init 0')
+    parser.add_argument('--atten',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='enable pure atten or not, call default True')
+    parser.add_argument('--atten_num1',
+                        type=int,
+                        default=0,
+                        help='player1 atten block num, init 0')
+    parser.add_argument('--atten_num2',
+                        type=int,
+                        default=0,
+                        help='player2 atten block num, init 0')
     parser.add_argument('--n_playout1',
                         '-n1',
                         type=int,
@@ -338,6 +464,12 @@ if __name__ == '__main__':
         help=
         'take multiple weights paths, init empty, pharse several continuous path and analyze together'
     )
+    # training data analysis
+    parser.add_argument('--timing',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='analyze forward time or not, call default True')
 
     opt = parser.parse_args()
 
@@ -345,3 +477,5 @@ if __name__ == '__main__':
         evaluate(opt)
     if opt.analyze:
         analyze(opt)
+    if opt.timing:
+        time_forward(opt)

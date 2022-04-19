@@ -483,7 +483,7 @@ class DecoderHead(nn.Module):
         act_x = F.relu(self.act_conv1(X))
         act_x = self.act_fc1(
             act_x.view(-1, 4 * self.board_width * self.board_height))
-        act_x = F.log_softmax(act_x)
+        act_x = F.log_softmax(act_x, dim=1)
 
         val_x = F.relu(self.val_conv1(X))
         val_x = self.val_fc1(
