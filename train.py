@@ -9,8 +9,10 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
+import pickle
 from game import Board, Game
 import time
+import re
 # from mcts_pure import MCTSPlayer as MCTS_Pure
 # from mcts_alphaZero import MCTSPlayer
 from MCTS import MCTSPlayer as MCTS_Pure
@@ -40,7 +42,10 @@ class TrainPipeline():
         self.temp = 1.0  # the temperature param
         self.n_playout = opt.n_playout  # default 800 num of simulations for each move
         self.c_puct = 5
-        self.buffer_size = 10000
+        if opt.record:
+            self.buffer_size = 30000
+        else:
+            self.buffer_size = 10000
         self.batch_size = 512  # mini-batch size for training
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 1
@@ -272,6 +277,99 @@ class TrainPipeline():
         except KeyboardInterrupt:
             print('\n\rquit')
 
+    def record(self, opt):
+        string_list=re.split(r'[.]',opt.weights)
+        print("start recording: ", string_list[0])
+        while True:
+            # start_epoch = time.time()
+            self.collect_selfplay_data(self.play_batch_size)
+            total_len=len(self.data_buffer)
+            if total_len >= self.buffer_size:
+                f = open(string_list[0]+"_data_buffer.data",'wb')
+                pickle.dump(self.data_buffer, f)
+                f.close()
+                break
+            print("episode_len:{}, total_len:{}".format(
+                self.episode_len,total_len))
+
+    def supervised(self,opt):
+        try:
+            data_path=opt.supervised_data
+            self.data_buffer = pickle.load(open(data_path,'rb'))  
+            # string_list=re.split('current|best',data_path)
+            # path=string_list
+            print("path of training data: ",data_path)
+            
+            # create dir
+            desc = '_' + "supervised"+'_' + str(opt.width) + '_' + str(opt.width) + '_' + str(
+                opt.number_in_row)
+            dir = Path('models/' + opt.save_dir + desc)
+            training_data = None
+            evaluate_data = None
+            if not dir.exists():
+                dir.mkdir(parents=True, exist_ok=True)  # make directory
+        
+            
+
+            for i in range(0, self.game_batch_num):
+                start_epoch = time.time()
+                # self.collect_selfplay_data(self.play_batch_size)
+                print("batch i:{}".format(
+                    i + 1))
+                # if len(self.data_buffer) > self.batch_size:
+                ret_list = self.policy_update()
+                ret_list.insert(0, i)
+                # else:
+                #     ret_list = [i, 0, 0, 0, 0, 0, 0]
+                if training_data is None:
+                    training_data = np.array(ret_list).reshape(
+                        -1, len(ret_list))
+                else:
+                    training_data = np.concatenate(
+                        (training_data, np.array(ret_list).reshape(
+                            -1, len(ret_list))),
+                        axis=0)
+                np.save(dir / 'training_data', training_data)
+                # check the performance of the current model,
+                # and save the model params
+                end_epoch = time.time()
+                elapsed = end_epoch - start_epoch
+                avg_time = elapsed* 1000
+                print("training epoch time {:.5f}ms".format(avg_time))
+                if (i + 1) % self.check_freq == 0:
+                    print("current self-play batch: {}".format(i + 1))
+                    win_ratio, win_cnt = self.policy_evaluate(n_games=6)
+                    # save data
+                    eva_list = np.array([
+                        i + 1, self.pure_mcts_playout_num, win_ratio,
+                        win_cnt[0], win_cnt[1], win_cnt[2], win_cnt[-1]
+                    ])
+                    if evaluate_data is None:
+                        evaluate_data = eva_list.reshape(-1, len(eva_list))
+                    else:
+                        evaluate_data = np.concatenate(
+                            (evaluate_data, eva_list.reshape(
+                                -1, len(eva_list))),
+                            axis=0)
+                    np.save(dir / 'evaluate_data', evaluate_data)
+                    model_path = dir / ('current_policy_' + str(i + 1) +
+                                        '.model')
+                    self.policy_value_net.save_model(str(model_path))
+                    if win_ratio > self.best_win_ratio:
+                        print("New best policy!!!!!!!!")
+                        self.best_win_ratio = win_ratio
+                        # update the best_policy
+                        model_path = dir / ('best_policy_' + str(i + 1) +
+                                            '.model')
+                        self.policy_value_net.save_model(str(model_path))
+                        if (self.best_win_ratio >= 0.8
+                                and self.pure_mcts_playout_num <
+                                opt.max_playout):  # default 9000
+                            self.pure_mcts_playout_num += 1000
+                            self.best_win_ratio = 0.0
+
+        except KeyboardInterrupt:
+            print('\n\rquit')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -339,7 +437,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_batch',
                         type=int,
                         default=3000,
-                        help='max batch number, init 1500')
+                        help='max batch number, init 3000')
     parser.add_argument('--learn_rate',
                         '-lr',
                         type=float,
@@ -368,10 +466,27 @@ if __name__ == '__main__':
                         type=int,
                         default=4,
                         help='attention cascad block num, init 4')
+    parser.add_argument('--record',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='record data from a model, init False, need weights input')
+    parser.add_argument('--supervised_data',
+                        '-sw',
+                        type=str,
+                        default='',
+                        help='training data recorded for supervised learning, input to train a model, init empty')
 
     opt = parser.parse_args()
     model_file = None
     if opt.weights != '':
         model_file = opt.weights
     training_pipeline = TrainPipeline(model_file)
-    training_pipeline.run()
+    if opt.record:
+        if model_file=='':
+            raise ValueError("need model file to record data")
+        training_pipeline.record(opt)
+    elif opt.supervised_data!='':
+        training_pipeline.supervised(opt)
+    else:
+        training_pipeline.run()
