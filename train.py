@@ -338,7 +338,7 @@ class TrainPipeline():
                 print("training epoch time {:.5f}ms".format(avg_time))
                 if (i + 1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
-                    win_ratio, win_cnt = self.policy_evaluate(n_games=6)
+                    win_ratio, win_cnt = self.policy_evaluate(n_games=3)
                     # save data
                     eva_list = np.array([
                         i + 1, self.pure_mcts_playout_num, win_ratio,
@@ -362,7 +362,7 @@ class TrainPipeline():
                         model_path = dir / ('best_policy_' + str(i + 1) +
                                             '.model')
                         self.policy_value_net.save_model(str(model_path))
-                        if (self.best_win_ratio >= 0.8
+                        if (self.best_win_ratio >= 0.6
                                 and self.pure_mcts_playout_num <
                                 opt.max_playout):  # default 9000
                             self.pure_mcts_playout_num += 1000

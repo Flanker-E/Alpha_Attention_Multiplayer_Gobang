@@ -3,7 +3,7 @@ from cProfile import label
 import torch
 import time
 from game import Board, Game
-from MCTS import MCTSPlayer as MCTS_Pure
+from mcts_pure import MCTSPlayer as MCTS_Pure
 from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
 import argparse
 from pathlib import Path
@@ -29,6 +29,10 @@ def evaluate(opt):
     c_puct2 = 5
     res_num1 = opt.res_num1
     res_num2 = opt.res_num2
+    atten1 = opt.atten1
+    atten2 = opt.atten2
+    atten_num1 = opt.atten_num1
+    atten_num2 = opt.atten_num2
     n_playout1 = opt.n_playout1
     n_playout2 = opt.n_playout2
     if (num_round <= 0):
@@ -45,14 +49,18 @@ def evaluate(opt):
     # create players
     print("Create Player 1")
     Player1_1 = create_player(width, height, player1, weights1, c_puct1,
-                              n_playout1, res_num1)
+                              n_playout1, player_num=3, res_num=res_num1,
+                              atten=atten1, atten_num=atten_num1)
     Player1_2 = create_player(width, height, player1, weights1, c_puct1,
-                              n_playout1, res_num1)
+                              n_playout1, player_num=3, res_num=res_num1,
+                              atten=atten1, atten_num=atten_num1)
     print("Create Player 2")
     Player2_1 = create_player(width, height, player2, weights2, c_puct2,
-                              n_playout2, res_num2)
+                              n_playout2, player_num=3, res_num=res_num2,
+                              atten=atten2, atten_num=atten_num2)
     Player2_2 = create_player(width, height, player2, weights2, c_puct2,
-                              n_playout2, res_num2)
+                              n_playout2, player_num=3, res_num=res_num2,
+                              atten=atten2, atten_num=atten_num2)
 
     # begin test
     print("1 Player1 vs 2 Player2:")
@@ -281,7 +289,7 @@ def time_forward(opt):
     weights = ''
     c_puct = 5
     res_num = opt.res_num1
-    atten = opt.atten
+    atten = opt.atten1
     atten_num = opt.atten_num1
     n_playout = opt.n_playout1
     batch_num = 512
@@ -391,7 +399,12 @@ if __name__ == '__main__':
                         type=int,
                         default=0,
                         help='player2 res block num, init 0')
-    parser.add_argument('--atten',
+    parser.add_argument('--atten1',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='enable pure atten or not, call default True')
+    parser.add_argument('--atten2',
                         nargs='?',
                         const=True,
                         default=False,

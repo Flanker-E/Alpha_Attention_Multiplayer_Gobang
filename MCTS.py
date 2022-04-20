@@ -69,7 +69,9 @@ class MCTS(object):
         for i in range(self._n_playout):
             cur_board_state = copy.deepcopy(board_state)
             self._playout(cur_board_state)
-        move, prob = self._root.select(print=False)
+        move = max(self._root.children.items(),
+                   key=lambda act_node: act_node[1]._n_visits)[0]
+        prob =None
         return move, prob
 
     def _playout(self, board_state):
@@ -105,13 +107,14 @@ class MCTS(object):
         for i in range(limit):
             available_move = board_state.availables
             if len(available_move) > 0:
-                # max_action=np.random.choice(available_move)
-                action = rollout_policy_fn(board_state)
-                max_action = max(action, key=itemgetter(1))[0]
-                board_state.do_move(max_action)
                 end, winner = board_state.game_end()
                 if end:
                     return winner
+                    # max_action=np.random.choice(available_move)
+                action = rollout_policy_fn(board_state)
+                max_action = max(action, key=itemgetter(1))[0]
+                board_state.do_move(max_action)
+                
             else:
                 return -1
         print("reach rollout limit")

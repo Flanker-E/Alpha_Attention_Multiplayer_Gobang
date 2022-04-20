@@ -5,3 +5,5 @@ current_policy.model
 /models*
 test.ipynb
 data_buffer.data
+mcts_pure.py
+mcts_alphaZero.py

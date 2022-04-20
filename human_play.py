@@ -85,8 +85,16 @@ def run():
             best_policy = PolicyValueNet(width, 
                                         height, 
                                         res_num=res_num, 
+                                        atten_num=opt.atten_num,
+                                        atten=opt.atten,
                                         model_file=model_file)
-            mcts_player1 = MCTSPlayer(policy_value_fn = best_policy.policy_value_fn,
+            best_policy_base = PolicyValueNet(width, 
+                                        height, 
+                                        # res_num=res_num, 
+                                        # atten_num=opt.atten_num,
+                                        # atten=opt.atten,
+                                        model_file=Path("models/models_0315_2042_playout800_res0_8_8_4/current_policy_3250.model"))
+            mcts_player1 = MCTSPlayer(policy_value_fn = best_policy_base.policy_value_fn,
                                     c_puct=5,
                                     n_playout=mcts_playout_num)  # set larger n_playout for better performance
             mcts_player2 = MCTSPlayer(policy_value_fn = best_policy.policy_value_fn,
@@ -132,7 +140,9 @@ if __name__ == '__main__':
     parser.add_argument('--pure_num', type=int, default=2000, help='play out numbers of pure MCTS, default 2000')
     parser.add_argument('--alpha_num', type=int, default=1000, help='play out numbers of Alpha MCTS, default 1000')
     parser.add_argument('--show_GUI', nargs='?', const=True, default=False, help='draw GUI or not, default True')
+    parser.add_argument('--atten', nargs='?', const=True, default=False, help='draw GUI or not, default True')
     parser.add_argument('--res_num', type=int, default=0, help='res block num, init 0')
+    parser.add_argument('--atten_num', type=int, default=0, help='attention block num, init 0')
     opt = parser.parse_args()
 
     run()
