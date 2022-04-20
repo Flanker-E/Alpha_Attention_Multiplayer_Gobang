@@ -251,7 +251,7 @@ def gobangwin():
     return win
 
 
-def main():
+def go():
     win = gobangwin()
 
     for i in range(COLUMN+1):
@@ -331,4 +331,3 @@ def main():
     win.close()
 
 
-main()
