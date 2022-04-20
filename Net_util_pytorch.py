@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from mix_transformer import *
+from swin_transformer import *
 from mix_transformer_simple import MixVisionTransformer as MixSimple
 
 
@@ -37,6 +38,24 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  # coef of l2 penalty
 
         if atten:
+            # self.policy_value_net = SwinTransformer(
+            # img_size=8, 
+            # patch_size=16, 
+            # in_chans=6, 
+            # num_classes=1000, 
+            # embed_dim=8, 
+            # depths=[2, 2, 2, 1], 
+            # num_heads=[2, 2, 2, 1], 
+            # window_size=4, 
+            # mlp_ratios=2, 
+            # qkv_bias=False, 
+            # qk_scale=None, 
+            # drop_rate=0., 
+            # attn_drop_rate=0., 
+            # drop_path_rate=0.1, 
+            # norm_layer=nn.LayerNorm, 
+            # ape=False, 
+            # patch_norm=True).to(self.device)
             if board_width in [8, 11]:
                 if board_width == 8:
                     self.policy_value_net = MixSimple(
@@ -127,9 +146,12 @@ class Net(nn.Module):
         self.board_height = board_height
         self.conv1 = nn.Conv2d(player_num * 2, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        # self.attenblocks = nn.Sequential(
+        #     *(atten_num *
+        #       [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
         self.attenblocks = nn.Sequential(
             *(atten_num *
-              [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
+              [SwinTransformerBlock(dim=64,input_resolution=(4,4), num_heads=2,mlp_ratio=1)]))
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.resblocks = nn.Sequential(*(res_num * [ResBlock(128, 128)]))
         
