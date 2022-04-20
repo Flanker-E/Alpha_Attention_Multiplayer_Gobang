@@ -97,11 +97,11 @@ python evaluate.py --eval --width 8 -p1 alpha_mcts -p2 alpha_mcts -w1 models/mod
 ```
 read and analyze training information
 ```
-python evaluate.py --pharse -ws models/models_0315_2042_playout800_res0_8_8_4
+python evaluate.py --analyze -ws models/models_0315_2042_playout800_res0_8_8_4
 ```
 read and analyze more continuous training sections
 ```
-python evaluate.py --pharse -ws models/models_0304_0041_8_8_4/,models/models_0305_0035_continue1300_8_8_4/,models/models_03091448_continue2700_8_8_4
+python evaluate.py --analyze -ws models/models_0304_0041_8_8_4/,models/models_0305_0035_continue1300_8_8_4/,models/models_03091448_continue2700_8_8_4
 
 ```
 Available argparse are listed below
