@@ -51,6 +51,7 @@ class MixVisionTransformer(nn.Module):
             depths = depths[0:-1]
             sr_ratios = sr_ratios[0:-1]
         print("attention cascad block num: ",self.blk_num)
+        print("attention depth: ", depths)
         # patch_embed
         self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
                                               patch_size=3,
