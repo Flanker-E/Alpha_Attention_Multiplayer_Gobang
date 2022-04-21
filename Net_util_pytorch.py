@@ -19,7 +19,8 @@ class PolicyValueNet(object):
                  player_num=3,
                  atten=False,
                  drop=0.,
-                 atten_cad_blk_num=4) -> None:
+                 atten_cad_blk_num=4,
+                 depths=[1,1,1,1]) -> None:
         device = "cpu"
         if use_gpu and torch.cuda.is_available():
             print("using GPU!")
@@ -43,6 +44,7 @@ class PolicyValueNet(object):
                         drop_rate=drop,
                         attn_drop_rate=drop,
                         drop_path_rate=drop,
+                        depths=depths,
                         atten_cad_blk_num=atten_cad_blk_num).to(self.device)
                 else:
                     self.policy_value_net = MixSimple(
@@ -50,6 +52,7 @@ class PolicyValueNet(object):
                         drop_rate=drop,
                         attn_drop_rate=drop,
                         drop_path_rate=drop,
+                        depths=depths,
                         atten_cad_blk_num=atten_cad_blk_num).to(self.device)
         else:
             self.policy_value_net = Net(board_width, board_height, player_num,

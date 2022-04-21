@@ -61,34 +61,39 @@ class TrainPipeline():
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
-        atten_cad_blk_num=opt.atten_cad_blk_num
+        atten_cad_blk_num = opt.atten_cad_blk_num
         if init_model:
             # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   res_num=self.res_num,
-                                                   atten_num=self.atten_num,
-                                                   use_gpu=self.use_gpu,
-                                                   model_file=init_model,
-                                                   atten=self.atten,
-                                                   drop=opt.drop,
-                                                   atten_cad_blk_num=atten_cad_blk_num)
+            self.policy_value_net = PolicyValueNet(
+                self.board_width,
+                self.board_height,
+                res_num=self.res_num,
+                atten_num=self.atten_num,
+                use_gpu=self.use_gpu,
+                model_file=init_model,
+                atten=self.atten,
+                drop=opt.drop,
+                depths=opt.depths,
+                atten_cad_blk_num=atten_cad_blk_num)
             print("NEW policyvaluenet load from weight file")
         else:
             # start training from a new policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   res_num=self.res_num,
-                                                   atten_num=self.atten_num,
-                                                   use_gpu=self.use_gpu,
-                                                   atten=self.atten,
-                                                   drop=opt.drop,
-                                                   atten_cad_blk_num=atten_cad_blk_num)
+            self.policy_value_net = PolicyValueNet(
+                self.board_width,
+                self.board_height,
+                res_num=self.res_num,
+                atten_num=self.atten_num,
+                use_gpu=self.use_gpu,
+                atten=self.atten,
+                drop=opt.drop,
+                depths=opt.depths,
+                atten_cad_blk_num=atten_cad_blk_num)
             print("NEW policyvaluenet")
-        self.mcts_player = MCTSPlayer(policy_value_fn=self.policy_value_net.policy_value_fn,
-                                      c_puct=self.c_puct,
-                                      n_playout=self.n_playout,
-                                      is_selfplay=1)
+        self.mcts_player = MCTSPlayer(
+            policy_value_fn=self.policy_value_net.policy_value_fn,
+            c_puct=self.c_puct,
+            n_playout=self.n_playout,
+            is_selfplay=1)
         print("NEW Alpha mcts player")
 
     def get_equi_data(self, play_data):
@@ -181,9 +186,10 @@ class TrainPipeline():
         Evaluate the trained policy by playing against the pure MCTS player
         Note: this is only for monitoring the progress of training
         """
-        current_mcts_player = MCTSPlayer(policy_value_fn=self.policy_value_net.policy_value_fn,
-                                         c_puct=self.c_puct,
-                                         n_playout=self.n_playout)
+        current_mcts_player = MCTSPlayer(
+            policy_value_fn=self.policy_value_net.policy_value_fn,
+            c_puct=self.c_puct,
+            n_playout=self.n_playout)
         pure_mcts_player1 = MCTS_Pure(c_puct=5,
                                       n_playout=self.pure_mcts_playout_num)
         pure_mcts_player2 = MCTS_Pure(c_puct=5,
@@ -241,7 +247,7 @@ class TrainPipeline():
                 # and save the model params
                 end_epoch = time.time()
                 elapsed = end_epoch - start_epoch
-                avg_time = elapsed* 1000
+                avg_time = elapsed * 1000
                 print("training epoch time {:.5f}ms".format(avg_time))
                 if (i + 1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
@@ -278,44 +284,41 @@ class TrainPipeline():
             print('\n\rquit')
 
     def record(self, opt):
-        string_list=re.split(r'[.]',opt.weights)
+        string_list = re.split(r'[.]', opt.weights)
         print("start recording: ", string_list[0])
         while True:
             # start_epoch = time.time()
             self.collect_selfplay_data(self.play_batch_size)
-            total_len=len(self.data_buffer)
+            total_len = len(self.data_buffer)
             if total_len >= self.buffer_size:
-                f = open(string_list[0]+"_data_buffer.data",'wb')
+                f = open(string_list[0] + "_data_buffer.data", 'wb')
                 pickle.dump(self.data_buffer, f)
                 f.close()
                 break
             print("episode_len:{}, total_len:{}".format(
-                self.episode_len,total_len))
+                self.episode_len, total_len))
 
-    def supervised(self,opt):
+    def supervised(self, opt):
         try:
-            data_path=opt.supervised_data
-            self.data_buffer = pickle.load(open(data_path,'rb'))  
+            data_path = opt.supervised_data
+            self.data_buffer = pickle.load(open(data_path, 'rb'))
             # string_list=re.split('current|best',data_path)
             # path=string_list
-            print("path of training data: ",data_path)
-            
+            print("path of training data: ", data_path)
+
             # create dir
-            desc = '_' + "supervised"+'_' + str(opt.width) + '_' + str(opt.width) + '_' + str(
-                opt.number_in_row)
+            desc = '_' + "supervised" + '_' + str(opt.width) + '_' + str(
+                opt.width) + '_' + str(opt.number_in_row)
             dir = Path('models/' + opt.save_dir + desc)
             training_data = None
             evaluate_data = None
             if not dir.exists():
                 dir.mkdir(parents=True, exist_ok=True)  # make directory
-        
-            
 
             for i in range(0, self.game_batch_num):
                 start_epoch = time.time()
                 # self.collect_selfplay_data(self.play_batch_size)
-                print("batch i:{}".format(
-                    i + 1))
+                print("batch i:{}".format(i + 1))
                 # if len(self.data_buffer) > self.batch_size:
                 ret_list = self.policy_update()
                 ret_list.insert(0, i)
@@ -334,7 +337,7 @@ class TrainPipeline():
                 # and save the model params
                 end_epoch = time.time()
                 elapsed = end_epoch - start_epoch
-                avg_time = elapsed* 1000
+                avg_time = elapsed * 1000
                 print("training epoch time {:.5f}ms".format(avg_time))
                 if (i + 1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
@@ -370,6 +373,7 @@ class TrainPipeline():
 
         except KeyboardInterrupt:
             print('\n\rquit')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -466,27 +470,43 @@ if __name__ == '__main__':
                         type=int,
                         default=4,
                         help='attention cascad block num, init 4')
-    parser.add_argument('--record',
-                        nargs='?',
-                        const=True,
-                        default=False,
-                        help='record data from a model, init False, need weights input')
-    parser.add_argument('--supervised_data',
-                        '-sw',
-                        type=str,
-                        default='',
-                        help='training data recorded for supervised learning, input to train a model, init empty')
-
+    parser.add_argument(
+        '--record',
+        nargs='?',
+        const=True,
+        default=False,
+        help='record data from a model, init False, need weights input')
+    parser.add_argument(
+        '--supervised_data',
+        '-sw',
+        type=str,
+        default='',
+        help=
+        'training data recorded for supervised learning, input to train a model, init empty'
+    )
+    parser.add_argument('--depths',
+                        nargs='*',
+                        type=int,
+                        required=False,
+                        default=[1, 1, 1, 1],
+                        help='depths of attention blocks, default [1,1,1,1]')
+    # parser.add_argument(
+    #     '--test',
+    #     nargs='?',
+    #     const=True,
+    #     default=False,
+    #     help='record data from a model, init False, need weights input')
     opt = parser.parse_args()
+    
     model_file = None
     if opt.weights != '':
         model_file = opt.weights
     training_pipeline = TrainPipeline(model_file)
     if opt.record:
-        if model_file=='':
+        if model_file == '':
             raise ValueError("need model file to record data")
         training_pipeline.record(opt)
-    elif opt.supervised_data!='':
+    elif opt.supervised_data != '':
         training_pipeline.supervised(opt)
     else:
         training_pipeline.run()
