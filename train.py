@@ -497,7 +497,7 @@ if __name__ == '__main__':
     #     default=False,
     #     help='record data from a model, init False, need weights input')
     opt = parser.parse_args()
-    
+
     model_file = None
     if opt.weights != '':
         model_file = opt.weights

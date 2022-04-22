@@ -480,19 +480,19 @@ class DecoderHead(nn.Module):
             _c4 = resize(c4,
                      size=c1.size()[2:],
                      mode='bilinear',
-                     align_corners=True)
+                     align_corners=False)
 
         # _c3 = c3.permute(0, 2, 1).reshape(n, -1, c3.shape[2], c3.shape[3])
         _c3 = resize(c3,
                      size=c1.size()[2:],
                      mode='bilinear',
-                     align_corners=True)
+                     align_corners=False)
 
         # _c2 = c2.permute(0, 2, 1).reshape(n, -1, c2.shape[2], c2.shape[3])
         _c2 = resize(c2,
                      size=c1.size()[2:],
                      mode='bilinear',
-                     align_corners=True)
+                     align_corners=False)
 
         # _c1 = c1.permute(0, 2, 1).reshape(n, -1, c1.shape[2], c1.shape[3])
         _c1 = c1
