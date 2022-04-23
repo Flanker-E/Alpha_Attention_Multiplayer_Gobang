@@ -12,17 +12,10 @@ from collections import defaultdict, deque
 import pickle
 from game import Board, Game
 import time
-<<<<<<< HEAD
 import re
 import copy
 import multiprocessing as mp
 from multiprocessing import Pool
-=======
-import copy
-import multiprocessing as mp
-from multiprocessing import Pool
-# from multiprocessing.Manager import Queue
->>>>>>> multiprocessing
 # from mcts_pure import MCTSPlayer as MCTS_Pure
 # from mcts_alphaZero import MCTSPlayer
 from MCTS import MCTSPlayer as MCTS_Pure
@@ -75,7 +68,6 @@ class TrainPipeline():
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
-<<<<<<< HEAD
         atten_cad_blk_num=opt.atten_cad_blk_num
         self.multiprocessing=opt.multiprocessing
         
@@ -113,45 +105,6 @@ class TrainPipeline():
             c_puct=self.c_puct,
             n_playout=self.n_playout,
             is_selfplay=1))
-=======
-        atten_cad_blk_num=opt.atten_cad_blk_num
-        self.multiprocessing=opt.multiprocessing
-        
-        self.policy_value_net=[]
-        self.mcts_player=[]
-        if init_model:
-            # start training from an initial policy-value net
-            for i in range(self.process_num):
-                self.policy_value_net.append (PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   res_num=self.res_num,
-                                                   atten_num=self.atten_num,
-                                                   use_gpu=self.use_gpu,
-                                                   model_file=init_model,
-                                                   atten=self.atten,
-                                                   drop=opt.drop,
-                                                   atten_cad_blk_num=atten_cad_blk_num))
-            print("NEW policyvaluenet load from weight file")
-        else:
-            # start training from a new policy-value net
-            for i in range(self.process_num):
-                self.policy_value_net.append (PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   res_num=self.res_num,
-                                                   atten_num=self.atten_num,
-                                                   use_gpu=self.use_gpu,
-                                                   atten=self.atten,
-                                                   drop=opt.drop,
-                                                   atten_cad_blk_num=atten_cad_blk_num))
-            print("NEW policyvaluenet")
-        
-        for i in range(self.process_num):
-                self.mcts_player.append ( MCTSPlayer(
-            policy_value_fn=self.policy_value_net[i].policy_value_fn,
-            c_puct=self.c_puct,
-            n_playout=self.n_playout,
-            is_selfplay=1))
->>>>>>> multiprocessing
         print("NEW Alpha mcts player")
 
     def get_equi_data(self, play_data):
@@ -259,12 +212,8 @@ class TrainPipeline():
         Note: this is only for monitoring the progress of training
         """
         current_mcts_player = MCTSPlayer(
-<<<<<<< HEAD
             # policy_value_fn=self.policy_value_net.policy_value_fn,
             policy_value_fn=self.policy_value_net[0].policy_value_fn,
-=======
-            policy_value_fn=self.policy_value_net[0].policy_value_fn,
->>>>>>> multiprocessing
             c_puct=self.c_puct,
             n_playout=self.n_playout)
         pure_mcts_player1 = MCTS_Pure(c_puct=5,
@@ -303,7 +252,6 @@ class TrainPipeline():
                 print("resume from batch: ", init_batch)
             for i in range(init_batch, self.game_batch_num):
                 start_epoch = time.time()
-<<<<<<< HEAD
                 # self.collect_selfplay_data(self.play_batch_size)
                 if self.multiprocessing:
                     p = Pool(2)
@@ -323,26 +271,6 @@ class TrainPipeline():
                 else:
                     self.collect_selfplay_data(self.mcts_player[0],self.play_batch_size)
                 print("len of deque",len(self.data_buffer))
-=======
-                if self.multiprocessing:
-                    p = Pool(2)
-                    manager = mp.Manager()
-                    que = manager.Queue()
-                    self.episode_len=0
-                    print("start multi task")
-                    for n in range(2):
-                        p.apply_async(self.multip_collect_selfplay_data, args=(que,self.mcts_player[n], self.play_batch_size//2,))
-                    p.close()
-                    p.join()
-                    for n in range(2):
-                        episode_len, play_data= que.get()
-                        # augment the data
-                        self.episode_len+=episode_len
-                        self.data_buffer.extend(play_data)
-                else:
-                    self.collect_selfplay_data(self.mcts_player[0],self.play_batch_size)
-                print("len of deque",len(self.data_buffer))
->>>>>>> multiprocessing
                 print("batch i:{}, episode_len:{}".format(
                     i*self.play_batch_size + 1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
@@ -365,16 +293,10 @@ class TrainPipeline():
                 # and save the model params
                 end_epoch = time.time()
                 elapsed = end_epoch - start_epoch
-<<<<<<< HEAD
                 avg_time = elapsed * 1000
                 print("training epoch time {:.5f}ms".format(avg_time))
                 # if (i + 1) % self.check_freq == 0:
                 if ((i+1)*self.play_batch_size ) % self.check_freq == 0:
-=======
-                avg_time = elapsed* 1000
-                print("training epoch time {:.5f}ms".format(avg_time))
-                if ((i+1)*self.play_batch_size ) % self.check_freq == 0:
->>>>>>> multiprocessing
                     print("current self-play batch: {}".format(i + 1))
                     win_ratio, win_cnt = self.policy_evaluate()
                     # save data
@@ -595,7 +517,6 @@ if __name__ == '__main__':
                         type=int,
                         default=4,
                         help='attention cascad block num, init 4')
-<<<<<<< HEAD
     parser.add_argument(
         '--record',
         nargs='?',
@@ -628,14 +549,6 @@ if __name__ == '__main__':
     #     const=True,
     #     default=False,
     #     help='record data from a model, init False, need weights input')
-=======
-    parser.add_argument('--multiprocessing',
-                        '-mp',
-                        nargs='?',
-                        const=True,
-                        default=False,
-                        help='using 2 multiprocessing, init False')
->>>>>>> multiprocessing
     opt = parser.parse_args()
 
     model_file = None
