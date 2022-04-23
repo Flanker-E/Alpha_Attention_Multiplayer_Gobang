@@ -4,3 +4,6 @@ best_policy.model
 current_policy.model
 /models*
 test.ipynb
+data_buffer.data
+mcts_alphaZero.py
+mcts_pure.py

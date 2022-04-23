@@ -18,7 +18,9 @@ class PolicyValueNet(object):
                  model_file='',
                  player_num=3,
                  atten=False,
-                 drop=0.) -> None:
+                 drop=0.,
+                 atten_cad_blk_num=4,
+                 depths=[1,1,1,1]) -> None:
         device = "cpu"
         if use_gpu and torch.cuda.is_available():
             print("using GPU!")
