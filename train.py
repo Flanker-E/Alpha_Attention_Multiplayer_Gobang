@@ -277,7 +277,8 @@ class TrainPipeline():
                     for n in range(self.play_batch_size):
                         ret_list = self.policy_update()
                         ret_list.insert(0, i*self.play_batch_size+n)
-                    self.policy_value_net[1].policy_value_net.load_state_dict(copy.deepcopy(self.policy_value_net[0].policy_value_net.state_dict()))
+                    if self.multiprocessing:
+                        self.policy_value_net[1].policy_value_net.load_state_dict(copy.deepcopy(self.policy_value_net[0].policy_value_net.state_dict()))
                 else:
                     ret_list = [i*self.play_batch_size, 0, 0, 0, 0, 0, 0]
                 if training_data is None:
