@@ -12,7 +12,17 @@ from collections import defaultdict, deque
 import pickle
 from game import Board, Game
 import time
+<<<<<<< HEAD
 import re
+import copy
+import multiprocessing as mp
+from multiprocessing import Pool
+=======
+import copy
+import multiprocessing as mp
+from multiprocessing import Pool
+# from multiprocessing.Manager import Queue
+>>>>>>> multiprocessing
 # from mcts_pure import MCTSPlayer as MCTS_Pure
 # from mcts_alphaZero import MCTSPlayer
 from MCTS import MCTSPlayer as MCTS_Pure
@@ -20,8 +30,7 @@ from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
 # from policy_value_net_pytorch import PolicyValueNet  # Pytorch
 from Net_util_pytorch import PolicyValueNet
-# from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
-# from policy_value_net_keras import PolicyValueNet # Keras
+
 import argparse
 from pathlib import Path
 
@@ -48,7 +57,12 @@ class TrainPipeline():
             self.buffer_size = 10000
         self.batch_size = 512  # mini-batch size for training
         self.data_buffer = deque(maxlen=self.buffer_size)
-        self.play_batch_size = 1
+        if(opt.multiprocessing):
+            self.play_batch_size = 2
+            self.process_num=2
+        else:
+            self.play_batch_size = 1
+            self.process_num=1
         self.epochs = 5  # num of train_steps for each update
         self.kl_targ = opt.kl_target
         self.check_freq = opt.check_freq  # default 50
@@ -61,39 +75,83 @@ class TrainPipeline():
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
-        atten_cad_blk_num = opt.atten_cad_blk_num
+<<<<<<< HEAD
+        atten_cad_blk_num=opt.atten_cad_blk_num
+        self.multiprocessing=opt.multiprocessing
+        
+        self.policy_value_net=[]
+        self.mcts_player=[]
         if init_model:
             # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(
-                self.board_width,
-                self.board_height,
-                res_num=self.res_num,
-                atten_num=self.atten_num,
-                use_gpu=self.use_gpu,
-                model_file=init_model,
-                atten=self.atten,
-                drop=opt.drop,
-                depths=opt.depths,
-                atten_cad_blk_num=atten_cad_blk_num)
+            for i in range(self.process_num):
+                self.policy_value_net.append (PolicyValueNet(self.board_width,
+                                                   self.board_height,
+                                                   res_num=self.res_num,
+                                                   atten_num=self.atten_num,
+                                                   use_gpu=self.use_gpu,
+                                                   model_file=init_model,
+                                                   atten=self.atten,
+                                                   drop=opt.drop,
+                                                   atten_cad_blk_num=atten_cad_blk_num))
             print("NEW policyvaluenet load from weight file")
         else:
             # start training from a new policy-value net
-            self.policy_value_net = PolicyValueNet(
-                self.board_width,
-                self.board_height,
-                res_num=self.res_num,
-                atten_num=self.atten_num,
-                use_gpu=self.use_gpu,
-                atten=self.atten,
-                drop=opt.drop,
-                depths=opt.depths,
-                atten_cad_blk_num=atten_cad_blk_num)
+            for i in range(self.process_num):
+                self.policy_value_net.append (PolicyValueNet(self.board_width,
+                                                   self.board_height,
+                                                   res_num=self.res_num,
+                                                   atten_num=self.atten_num,
+                                                   use_gpu=self.use_gpu,
+                                                   atten=self.atten,
+                                                   drop=opt.drop,
+                                                   atten_cad_blk_num=atten_cad_blk_num))
             print("NEW policyvaluenet")
-        self.mcts_player = MCTSPlayer(
-            policy_value_fn=self.policy_value_net.policy_value_fn,
+        
+        for i in range(self.process_num):
+                self.mcts_player.append ( MCTSPlayer(
+            policy_value_fn=self.policy_value_net[i].policy_value_fn,
             c_puct=self.c_puct,
             n_playout=self.n_playout,
-            is_selfplay=1)
+            is_selfplay=1))
+=======
+        atten_cad_blk_num=opt.atten_cad_blk_num
+        self.multiprocessing=opt.multiprocessing
+        
+        self.policy_value_net=[]
+        self.mcts_player=[]
+        if init_model:
+            # start training from an initial policy-value net
+            for i in range(self.process_num):
+                self.policy_value_net.append (PolicyValueNet(self.board_width,
+                                                   self.board_height,
+                                                   res_num=self.res_num,
+                                                   atten_num=self.atten_num,
+                                                   use_gpu=self.use_gpu,
+                                                   model_file=init_model,
+                                                   atten=self.atten,
+                                                   drop=opt.drop,
+                                                   atten_cad_blk_num=atten_cad_blk_num))
+            print("NEW policyvaluenet load from weight file")
+        else:
+            # start training from a new policy-value net
+            for i in range(self.process_num):
+                self.policy_value_net.append (PolicyValueNet(self.board_width,
+                                                   self.board_height,
+                                                   res_num=self.res_num,
+                                                   atten_num=self.atten_num,
+                                                   use_gpu=self.use_gpu,
+                                                   atten=self.atten,
+                                                   drop=opt.drop,
+                                                   atten_cad_blk_num=atten_cad_blk_num))
+            print("NEW policyvaluenet")
+        
+        for i in range(self.process_num):
+                self.mcts_player.append ( MCTSPlayer(
+            policy_value_fn=self.policy_value_net[i].policy_value_fn,
+            c_puct=self.c_puct,
+            n_playout=self.n_playout,
+            is_selfplay=1))
+>>>>>>> multiprocessing
         print("NEW Alpha mcts player")
 
     def get_equi_data(self, play_data):
@@ -118,16 +176,30 @@ class TrainPipeline():
                     (equi_state, np.flipud(equi_mcts_prob).flatten(), winner))
         return extend_data
 
-    def collect_selfplay_data(self, n_games=1):
+    def collect_selfplay_data(self, mcts_player, n_games=1):
         """collect self-play data for training"""
         for i in range(n_games):
-            winner, play_data = self.game.start_self_play(self.mcts_player,
+            winner, play_data = self.game.start_self_play(mcts_player,
                                                           temp=self.temp)
             play_data = list(play_data)[:]
             self.episode_len = len(play_data)
             # augment the data
             play_data = self.get_equi_data(play_data)
             self.data_buffer.extend(play_data)
+    
+    def multip_collect_selfplay_data(self, que, mcts_player, n_games=1):
+        """collect self-play data for training"""
+        print("start sub task")
+        for i in range(n_games):
+            winner, play_data = self.game.start_self_play(mcts_player,
+                                                          temp=self.temp)
+            play_data = list(play_data)[:]
+            episode_len = len(play_data)
+            # augment the data
+            play_data = self.get_equi_data(play_data)
+            # self.data_buffer.extend(play_data)
+            que.put([episode_len,play_data])
+        print("end sub task")
 
     def policy_update(self):
         """update the policy-value net"""
@@ -138,13 +210,13 @@ class TrainPipeline():
         # print("shape of training data",np.shape(state_batch))
 
         # start_epoch = time.time()
-        old_probs, old_v = self.policy_value_net.policy_value(state_batch)
+        old_probs, old_v = self.policy_value_net[0].policy_value(state_batch)
         # print(old_probs,old_v)
         for i in range(self.epochs):
-            loss, entropy = self.policy_value_net.train_step(
+            loss, entropy = self.policy_value_net[0].train_step(
                 state_batch, mcts_probs_batch, winner_batch,
                 self.learn_rate * self.lr_multiplier)
-            new_probs, new_v = self.policy_value_net.policy_value(state_batch)
+            new_probs, new_v = self.policy_value_net[0].policy_value(state_batch)
             kl = np.mean(
                 np.sum(old_probs *
                        (np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)),
@@ -187,7 +259,12 @@ class TrainPipeline():
         Note: this is only for monitoring the progress of training
         """
         current_mcts_player = MCTSPlayer(
-            policy_value_fn=self.policy_value_net.policy_value_fn,
+<<<<<<< HEAD
+            # policy_value_fn=self.policy_value_net.policy_value_fn,
+            policy_value_fn=self.policy_value_net[0].policy_value_fn,
+=======
+            policy_value_fn=self.policy_value_net[0].policy_value_fn,
+>>>>>>> multiprocessing
             c_puct=self.c_puct,
             n_playout=self.n_playout)
         pure_mcts_player1 = MCTS_Pure(c_puct=5,
@@ -226,14 +303,55 @@ class TrainPipeline():
                 print("resume from batch: ", init_batch)
             for i in range(init_batch, self.game_batch_num):
                 start_epoch = time.time()
-                self.collect_selfplay_data(self.play_batch_size)
-                print("batch i:{}, episode_len:{}".format(
-                    i + 1, self.episode_len))
-                if len(self.data_buffer) > self.batch_size:
-                    ret_list = self.policy_update()
-                    ret_list.insert(0, i)
+<<<<<<< HEAD
+                # self.collect_selfplay_data(self.play_batch_size)
+                if self.multiprocessing:
+                    p = Pool(2)
+                    manager = mp.Manager()
+                    que = manager.Queue()
+                    self.episode_len=0
+                    print("start multi task")
+                    for n in range(2):
+                        p.apply_async(self.multip_collect_selfplay_data, args=(que,self.mcts_player[n], self.play_batch_size//2,))
+                    p.close()
+                    p.join()
+                    for n in range(2):
+                        episode_len, play_data= que.get()
+                        # augment the data
+                        self.episode_len+=episode_len
+                        self.data_buffer.extend(play_data)
                 else:
-                    ret_list = [i, 0, 0, 0, 0, 0, 0]
+                    self.collect_selfplay_data(self.mcts_player[0],self.play_batch_size)
+                print("len of deque",len(self.data_buffer))
+=======
+                if self.multiprocessing:
+                    p = Pool(2)
+                    manager = mp.Manager()
+                    que = manager.Queue()
+                    self.episode_len=0
+                    print("start multi task")
+                    for n in range(2):
+                        p.apply_async(self.multip_collect_selfplay_data, args=(que,self.mcts_player[n], self.play_batch_size//2,))
+                    p.close()
+                    p.join()
+                    for n in range(2):
+                        episode_len, play_data= que.get()
+                        # augment the data
+                        self.episode_len+=episode_len
+                        self.data_buffer.extend(play_data)
+                else:
+                    self.collect_selfplay_data(self.mcts_player[0],self.play_batch_size)
+                print("len of deque",len(self.data_buffer))
+>>>>>>> multiprocessing
+                print("batch i:{}, episode_len:{}".format(
+                    i*self.play_batch_size + 1, self.episode_len))
+                if len(self.data_buffer) > self.batch_size:
+                    for n in range(self.play_batch_size):
+                        ret_list = self.policy_update()
+                        ret_list.insert(0, i*self.play_batch_size+n)
+                    self.policy_value_net[1].policy_value_net.load_state_dict(copy.deepcopy(self.policy_value_net[0].policy_value_net.state_dict()))
+                else:
+                    ret_list = [i*self.play_batch_size, 0, 0, 0, 0, 0, 0]
                 if training_data is None:
                     training_data = np.array(ret_list).reshape(
                         -1, len(ret_list))
@@ -247,14 +365,21 @@ class TrainPipeline():
                 # and save the model params
                 end_epoch = time.time()
                 elapsed = end_epoch - start_epoch
+<<<<<<< HEAD
                 avg_time = elapsed * 1000
                 print("training epoch time {:.5f}ms".format(avg_time))
-                if (i + 1) % self.check_freq == 0:
+                # if (i + 1) % self.check_freq == 0:
+                if ((i+1)*self.play_batch_size ) % self.check_freq == 0:
+=======
+                avg_time = elapsed* 1000
+                print("training epoch time {:.5f}ms".format(avg_time))
+                if ((i+1)*self.play_batch_size ) % self.check_freq == 0:
+>>>>>>> multiprocessing
                     print("current self-play batch: {}".format(i + 1))
                     win_ratio, win_cnt = self.policy_evaluate()
                     # save data
                     eva_list = np.array([
-                        i + 1, self.pure_mcts_playout_num, win_ratio,
+                        (i + 1)*self.play_batch_size, self.pure_mcts_playout_num, win_ratio,
                         win_cnt[0], win_cnt[1], win_cnt[2], win_cnt[-1]
                     ])
                     if evaluate_data is None:
@@ -267,14 +392,14 @@ class TrainPipeline():
                     np.save(dir / 'evaluate_data', evaluate_data)
                     model_path = dir / ('current_policy_' + str(i + 1) +
                                         '.model')
-                    self.policy_value_net.save_model(str(model_path))
+                    self.policy_value_net[0].save_model(str(model_path))
                     if win_ratio > self.best_win_ratio:
                         print("New best policy!!!!!!!!")
                         self.best_win_ratio = win_ratio
                         # update the best_policy
                         model_path = dir / ('best_policy_' + str(i + 1) +
                                             '.model')
-                        self.policy_value_net.save_model(str(model_path))
+                        self.policy_value_net[0].save_model(str(model_path))
                         if (self.best_win_ratio >= 0.8
                                 and self.pure_mcts_playout_num <
                                 opt.max_playout):  # default 9000
@@ -470,6 +595,7 @@ if __name__ == '__main__':
                         type=int,
                         default=4,
                         help='attention cascad block num, init 4')
+<<<<<<< HEAD
     parser.add_argument(
         '--record',
         nargs='?',
@@ -490,12 +616,26 @@ if __name__ == '__main__':
                         required=False,
                         default=[1, 1, 1, 1],
                         help='depths of attention blocks, default [1,1,1,1]')
+    parser.add_argument('--multiprocessing',
+                        '-mp',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='using 2 multiprocessing, init False')
     # parser.add_argument(
     #     '--test',
     #     nargs='?',
     #     const=True,
     #     default=False,
     #     help='record data from a model, init False, need weights input')
+=======
+    parser.add_argument('--multiprocessing',
+                        '-mp',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='using 2 multiprocessing, init False')
+>>>>>>> multiprocessing
     opt = parser.parse_args()
 
     model_file = None
