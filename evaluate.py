@@ -3,7 +3,7 @@ from cProfile import label
 import torch
 import time
 from game import Board, Game
-from mcts_pure import MCTSPlayer as MCTS_Pure
+from MCTS import MCTSPlayer as MCTS_Pure
 from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
 import argparse
 from pathlib import Path
