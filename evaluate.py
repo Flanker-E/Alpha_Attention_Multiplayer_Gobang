@@ -12,6 +12,8 @@ from collections import defaultdict
 import numpy as np
 import re
 import matplotlib.pyplot as plt
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 
 # evaluate the model
@@ -29,10 +31,6 @@ def evaluate(opt):
     c_puct2 = 5
     res_num1 = opt.res_num1
     res_num2 = opt.res_num2
-    atten1 = opt.atten1
-    atten2 = opt.atten2
-    atten_num1 = opt.atten_num1
-    atten_num2 = opt.atten_num2
     n_playout1 = opt.n_playout1
     n_playout2 = opt.n_playout2
     if (num_round <= 0):
@@ -49,18 +47,14 @@ def evaluate(opt):
     # create players
     print("Create Player 1")
     Player1_1 = create_player(width, height, player1, weights1, c_puct1,
-                              n_playout1, player_num=3, res_num=res_num1,
-                              atten=atten1, atten_num=atten_num1)
+                              n_playout1, res_num1)
     Player1_2 = create_player(width, height, player1, weights1, c_puct1,
-                              n_playout1, player_num=3, res_num=res_num1,
-                              atten=atten1, atten_num=atten_num1)
+                              n_playout1, res_num1)
     print("Create Player 2")
     Player2_1 = create_player(width, height, player2, weights2, c_puct2,
-                              n_playout2, player_num=3, res_num=res_num2,
-                              atten=atten2, atten_num=atten_num2)
+                              n_playout2, res_num2)
     Player2_2 = create_player(width, height, player2, weights2, c_puct2,
-                              n_playout2, player_num=3, res_num=res_num2,
-                              atten=atten2, atten_num=atten_num2)
+                              n_playout2, res_num2)
 
     # begin test
     print("1 Player1 vs 2 Player2:")
@@ -185,57 +179,28 @@ def analyze(opt):
     con_trainingdata = concate_traindata_list(trainingdata_list)
     index = con_trainingdata[0]
     loss = con_trainingdata[3]
-    plt.figure(figsize=(12,8.5))
-    plt.subplot(2, 2, 1)
+    plt.subplot(1, 2, 1)
     plt.plot(index, loss)
     plt.xlabel("num of batch")
     plt.ylabel("loss")
     plt.title("Loss")
-
-    kl = con_trainingdata[1]
-    average_kl=np.average(kl[5:])
-    plt.subplot(2, 2, 3)
-    plt.plot(index, kl)
-    plt.xlabel("num of batch")
-    plt.ylabel("kl")
-    plt.title("kl_divergence, ave="+str(round(average_kl,6)))
-    print("kl_divergence, ave="+str(round(average_kl,6)))
-
-    lr_multiplier = con_trainingdata[2]
-    average_lrm=np.average(lr_multiplier[5:])
-    plt.subplot(2, 2, 4)
-    plt.plot(index, lr_multiplier)
-    plt.xlabel("num of batch")
-    plt.ylabel("lr_multiplier")
-    plt.title("Lr multiplier, ave="+str(round(average_lrm,4)))
-    print("Lr multiplier, ave="+str(round(average_lrm,4)))
     # plt.show()
     # plt.close()
     con_evaldata = concate_evaldata_list(evaldata_list)
     index = con_evaldata[0]
     playout_num = con_evaldata[1]
-    improve_list=[]
-    
-    for i in range(len(playout_num)-1):
-        if playout_num[i+1]>playout_num[i]:
-            print("num of batch: {}, playout num: {}".format(index[i+1],playout_num[i+1]))
-            improve_list.append(playout_num[i])
     # score=con_evaldata[2]*con_evaldata[1]
     score = [a * b for a, b in zip(con_evaldata[2], con_evaldata[1])]
     print(opt.weights)
     dirs = re.split(r',models\/|models\/', opt.weights)
-    plt.subplot(2, 2, 2)
+    plt.subplot(1, 2, 2)
     plt.step(index, playout_num, where='post', label="playout")
     plt.plot(index, score, label="score")
     plt.legend()
     plt.xlabel("num of batch")
     plt.ylabel("num of playout")
     plt.title("Playout number vs batch")
-
-    
     plt.suptitle("training info. form: " + str(dirs))
-
-
     plt.show()
     # plt.close()
 
@@ -318,7 +283,7 @@ def time_forward(opt):
     weights = ''
     c_puct = 5
     res_num = opt.res_num1
-    atten = opt.atten1
+    atten = opt.atten
     atten_num = opt.atten_num1
     n_playout = opt.n_playout1
     batch_num = 512
@@ -428,12 +393,7 @@ if __name__ == '__main__':
                         type=int,
                         default=0,
                         help='player2 res block num, init 0')
-    parser.add_argument('--atten1',
-                        nargs='?',
-                        const=True,
-                        default=False,
-                        help='enable pure atten or not, call default True')
-    parser.add_argument('--atten2',
+    parser.add_argument('--atten',
                         nargs='?',
                         const=True,
                         default=False,
