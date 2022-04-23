@@ -64,11 +64,15 @@ Play with pure MCTS agent, with board size 11, win condition 5-in-a-row, number 
 ```
 python human_play.py --width 11 --number_in_row 5 --pure_num 3000 
 ```
+Play with pure MCTS agent
+```
+python human_play.py --min_max
+```
 Available argparse are listed below
 ```
 python human_play.py --help
 usage: human_play.py [-h] [--weights WEIGHTS] [--number_player NUMBER_PLAYER] [--width WIDTH] [--number_in_row NUMBER_IN_ROW] [--start START] [--pure_num PURE_NUM]
-                     [--alpha_num ALPHA_NUM] [--show_GUI [SHOW_GUI]] [--res_num RES_NUM]
+                     [--alpha_num ALPHA_NUM] [--show_GUI [SHOW_GUI]] [--res_num RES_NUM] [--min_max MIN_MAX]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -87,6 +91,7 @@ optional arguments:
   --show_GUI [SHOW_GUI]
                         draw GUI or not, default True
   --res_num RES_NUM     res block num, init 0
+  --min_max MIN_MAX     play with min_max agent
 
 ```
 ### evaluate and analyze
