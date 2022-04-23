@@ -68,7 +68,6 @@ class TrainPipeline():
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
-<<<<<<< HEAD
         self.swin_blk = opt.swin_blk
         atten_cad_blk_num = opt.atten_cad_blk_num
         if init_model:
@@ -85,7 +84,6 @@ class TrainPipeline():
                 drop=opt.drop,
                 depths=opt.depths,
                 atten_cad_blk_num=atten_cad_blk_num)
-=======
         atten_cad_blk_num=opt.atten_cad_blk_num
         self.multiprocessing=opt.multiprocessing
         
@@ -103,7 +101,6 @@ class TrainPipeline():
                                                    atten=self.atten,
                                                    drop=opt.drop,
                                                    atten_cad_blk_num=atten_cad_blk_num))
->>>>>>> main
             print("NEW policyvaluenet load from weight file")
         else:
             # start training from a new policy-value net
@@ -556,21 +553,18 @@ if __name__ == '__main__':
                         required=False,
                         default=[1, 1, 1, 1],
                         help='depths of attention blocks, default [1,1,1,1]')
-<<<<<<< HEAD
     parser.add_argument(
         '--swin_blk',
         nargs='?',
         const=True,
         default=False,
         help='training using attention with swin transformer block')
-=======
     parser.add_argument('--multiprocessing',
                         '-mp',
                         nargs='?',
                         const=True,
                         default=False,
                         help='using 2 multiprocessing, init False')
->>>>>>> main
     # parser.add_argument(
     #     '--test',
     #     nargs='?',
