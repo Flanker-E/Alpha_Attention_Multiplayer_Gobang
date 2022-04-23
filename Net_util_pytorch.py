@@ -6,7 +6,7 @@ from torch.autograd import Variable
 import numpy as np
 from mix_transformer import *
 from mix_transformer_simple import MixVisionTransformer as MixSimple
-
+from swin_transformer import *
 
 class PolicyValueNet(object):
     def __init__(self,
@@ -18,6 +18,7 @@ class PolicyValueNet(object):
                  model_file='',
                  player_num=3,
                  atten=False,
+                 swin_blk = False,
                  drop=0.,
                  atten_cad_blk_num=4,
                  depths=[1,1,1,1]) -> None:
@@ -40,12 +41,25 @@ class PolicyValueNet(object):
         if atten:
             if board_width in [8, 11]:
                 if board_width == 8:
-                    self.policy_value_net = MixSimple(
-                        drop_rate=drop,
-                        attn_drop_rate=drop,
-                        drop_path_rate=drop,
-                        depths=depths,
-                        atten_cad_blk_num=atten_cad_blk_num).to(self.device)
+                    # self.policy_value_net = MixSimple(
+                    #     drop_rate=drop,
+                    #     attn_drop_rate=drop,
+                    #     drop_path_rate=drop,
+                    #     depths=depths,
+                    #     atten_cad_blk_num=atten_cad_blk_num).to(self.device)
+                    self.policy_value_net = SwinTransformer(
+                        img_size=8, 
+                        patch_size=16, 
+                        in_chans=6, 
+                        num_classes=1,
+                        embed_dim=96, 
+                        depths=[1, 1, 1, 1], 
+                        num_heads=[2, 2, 2, 1],
+                        window_size=2, 
+                        mlp_ratio=2,
+                        drop_rate=drop, 
+                        attn_drop_rate=drop, 
+                        drop_path_rate=drop).to(self.device)
                 else:
                     self.policy_value_net = MixSimple(
                         img_size=[11, 6, 2, 1],
@@ -56,7 +70,7 @@ class PolicyValueNet(object):
                         atten_cad_blk_num=atten_cad_blk_num).to(self.device)
         else:
             self.policy_value_net = Net(board_width, board_height, player_num,
-                                        res_num, atten_num).to(self.device)
+                                        res_num, atten_num, swin_blk).to(self.device)
 
         if model_file != '':
             self.policy_value_net.load_state_dict(torch.load(model_file))
@@ -122,7 +136,7 @@ class PolicyValueNet(object):
 
 class Net(nn.Module):
     def __init__(self, board_width, board_height, player_num, res_num,
-                 atten_num) -> None:
+                 atten_num,swin_blk) -> None:
         super().__init__()
         self.res_num=res_num
         self.atten_num=atten_num
@@ -130,9 +144,11 @@ class Net(nn.Module):
         self.board_height = board_height
         self.conv1 = nn.Conv2d(player_num * 2, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.attenblocks = nn.Sequential(
-            *(atten_num *
-              [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
+        self.swin_blk = swin_blk
+        if self.swin_blk == False:
+            self.attenblocks = nn.Sequential(*(atten_num * [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
+        else:
+            self.attenblocks = nn.Sequential(*(atten_num * [SwinTransformerBlock(dim=64, input_resolution = (8,8), num_heads=2, window_size = 2, mlp_ratio=1)]))
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.resblocks = nn.Sequential(*(res_num * [ResBlock(128, 128)]))
         
@@ -152,7 +168,10 @@ class Net(nn.Module):
             X = X.flatten(2).transpose(1, 2)
             # X = self.attenblocks(X)
             for i, blk in enumerate(self.attenblocks):
-                X = blk(X, self.board_width, self.board_height)
+                if self.swin_blk == False:
+                    X = blk(X, self.board_width, self.board_height)
+                else:
+                    X = blk(X)
             X = X.transpose(1, 2).reshape(-1, 64, self.board_width,
                                         self.board_height)
         

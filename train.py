@@ -61,6 +61,7 @@ class TrainPipeline():
         self.atten_num = opt.atten_num  #init 0
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
+        self.swin_blk = opt.swin_blk
         atten_cad_blk_num = opt.atten_cad_blk_num
         if init_model:
             # start training from an initial policy-value net
@@ -72,6 +73,7 @@ class TrainPipeline():
                 use_gpu=self.use_gpu,
                 model_file=init_model,
                 atten=self.atten,
+                swin_blk = self.swin_blk,
                 drop=opt.drop,
                 depths=opt.depths,
                 atten_cad_blk_num=atten_cad_blk_num)
@@ -490,6 +492,12 @@ if __name__ == '__main__':
                         required=False,
                         default=[1, 1, 1, 1],
                         help='depths of attention blocks, default [1,1,1,1]')
+    parser.add_argument(
+        '--swin_blk',
+        nargs='?',
+        const=True,
+        default=False,
+        help='training using attention with swin transformer block')
     # parser.add_argument(
     #     '--test',
     #     nargs='?',
