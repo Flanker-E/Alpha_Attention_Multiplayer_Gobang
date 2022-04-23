@@ -3,7 +3,7 @@ from cProfile import label
 import torch
 import time
 from game import Board, Game
-from mcts_pure import MCTSPlayer as MCTS_Pure
+from MCTS import MCTSPlayer as MCTS_Pure
 from MCTS_alpha import MCTSPlayerAlpha as MCTSPlayer
 import argparse
 from pathlib import Path
@@ -12,7 +12,8 @@ from collections import defaultdict
 import numpy as np
 import re
 import matplotlib.pyplot as plt
-
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 # evaluate the model
 def evaluate(opt):
@@ -185,28 +186,57 @@ def analyze(opt):
     con_trainingdata = concate_traindata_list(trainingdata_list)
     index = con_trainingdata[0]
     loss = con_trainingdata[3]
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(12,8.5))
+    plt.subplot(2, 2, 1)
     plt.plot(index, loss)
     plt.xlabel("num of batch")
     plt.ylabel("loss")
     plt.title("Loss")
+
+    kl = con_trainingdata[1]
+    average_kl=np.average(kl[5:])
+    plt.subplot(2, 2, 3)
+    plt.plot(index, kl)
+    plt.xlabel("num of batch")
+    plt.ylabel("kl")
+    plt.title("kl_divergence, ave="+str(round(average_kl,6)))
+    print("kl_divergence, ave="+str(round(average_kl,6)))
+
+    lr_multiplier = con_trainingdata[2]
+    average_lrm=np.average(lr_multiplier[5:])
+    plt.subplot(2, 2, 4)
+    plt.plot(index, lr_multiplier)
+    plt.xlabel("num of batch")
+    plt.ylabel("lr_multiplier")
+    plt.title("Lr multiplier, ave="+str(round(average_lrm,4)))
+    print("Lr multiplier, ave="+str(round(average_lrm,4)))
     # plt.show()
     # plt.close()
     con_evaldata = concate_evaldata_list(evaldata_list)
     index = con_evaldata[0]
     playout_num = con_evaldata[1]
+    improve_list=[]
+    
+    for i in range(len(playout_num)-1):
+        if playout_num[i+1]>playout_num[i]:
+            print("num of batch: {}, playout num: {}".format(index[i+1],playout_num[i+1]))
+            improve_list.append(playout_num[i])
     # score=con_evaldata[2]*con_evaldata[1]
     score = [a * b for a, b in zip(con_evaldata[2], con_evaldata[1])]
     print(opt.weights)
     dirs = re.split(r',models\/|models\/', opt.weights)
-    plt.subplot(1, 2, 2)
+    plt.subplot(2, 2, 2)
     plt.step(index, playout_num, where='post', label="playout")
     plt.plot(index, score, label="score")
     plt.legend()
     plt.xlabel("num of batch")
     plt.ylabel("num of playout")
     plt.title("Playout number vs batch")
+
+    
     plt.suptitle("training info. form: " + str(dirs))
+
+
     plt.show()
     # plt.close()
 
