@@ -41,25 +41,25 @@ class PolicyValueNet(object):
         if atten:
             if board_width in [8, 11]:
                 if board_width == 8:
-                    # self.policy_value_net = MixSimple(
-                    #     drop_rate=drop,
-                    #     attn_drop_rate=drop,
-                    #     drop_path_rate=drop,
-                    #     depths=depths,
-                    #     atten_cad_blk_num=atten_cad_blk_num).to(self.device)
-                    self.policy_value_net = SwinTransformer(
-                        img_size=8, 
-                        patch_size=16, 
-                        in_chans=6, 
-                        num_classes=1,
-                        embed_dim=96, 
-                        depths=[1, 1, 1, 1], 
-                        num_heads=[2, 2, 2, 1],
-                        window_size=2, 
-                        mlp_ratio=2,
-                        drop_rate=drop, 
-                        attn_drop_rate=drop, 
-                        drop_path_rate=drop).to(self.device)
+                    self.policy_value_net = MixSimple(
+                        drop_rate=drop,
+                        attn_drop_rate=drop,
+                        drop_path_rate=drop,
+                        depths=depths,
+                        atten_cad_blk_num=atten_cad_blk_num).to(self.device)
+                    # self.policy_value_net = SwinTransformer(
+                    #     img_size=8, 
+                    #     patch_size=16, 
+                    #     in_chans=6, 
+                    #     num_classes=1,
+                    #     embed_dim=96, 
+                    #     depths=[1, 1, 1, 1], 
+                    #     num_heads=[2, 2, 2, 1],
+                    #     window_size=2, 
+                    #     mlp_ratio=2,
+                    #     drop_rate=drop, 
+                    #     attn_drop_rate=drop, 
+                    #     drop_path_rate=drop).to(self.device)
                 else:
                     self.policy_value_net = MixSimple(
                         img_size=[11, 6, 2, 1],
