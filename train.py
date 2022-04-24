@@ -69,21 +69,6 @@ class TrainPipeline():
         self.atten = opt.atten
         self.use_gpu = opt.use_gpu
         self.swin_blk = opt.swin_blk
-        atten_cad_blk_num = opt.atten_cad_blk_num
-        if init_model:
-            # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(
-                self.board_width,
-                self.board_height,
-                res_num=self.res_num,
-                atten_num=self.atten_num,
-                use_gpu=self.use_gpu,
-                model_file=init_model,
-                atten=self.atten,
-                swin_blk = self.swin_blk,
-                drop=opt.drop,
-                depths=opt.depths,
-                atten_cad_blk_num=atten_cad_blk_num)
         atten_cad_blk_num=opt.atten_cad_blk_num
         self.multiprocessing=opt.multiprocessing
         
@@ -99,6 +84,7 @@ class TrainPipeline():
                                                    use_gpu=self.use_gpu,
                                                    model_file=init_model,
                                                    atten=self.atten,
+                                                   swin_blk=self.swin_blk,
                                                    drop=opt.drop,
                                                    atten_cad_blk_num=atten_cad_blk_num))
             print("NEW policyvaluenet load from weight file")
@@ -111,6 +97,7 @@ class TrainPipeline():
                                                    atten_num=self.atten_num,
                                                    use_gpu=self.use_gpu,
                                                    atten=self.atten,
+                                                   swin_blk=self.swin_blk,
                                                    drop=opt.drop,
                                                    atten_cad_blk_num=atten_cad_blk_num))
             print("NEW policyvaluenet")
@@ -293,9 +280,15 @@ class TrainPipeline():
                     for n in range(self.play_batch_size):
                         ret_list = self.policy_update()
                         ret_list.insert(0, i*self.play_batch_size+n)
-                    self.policy_value_net[1].policy_value_net.load_state_dict(copy.deepcopy(self.policy_value_net[0].policy_value_net.state_dict()))
+                    if self.multiprocessing:
+                        self.policy_value_net[1].policy_value_net.load_state_dict(copy.deepcopy(self.policy_value_net[0].policy_value_net.state_dict()))
                 else:
                     ret_list = [i*self.play_batch_size, 0, 0, 0, 0, 0, 0]
+                end_epoch = time.time()
+                elapsed = end_epoch - start_epoch
+                avg_time = elapsed * 1000
+                print("training epoch time {:.5f}ms".format(avg_time))
+                ret_list.insert(7, avg_time)
                 if training_data is None:
                     training_data = np.array(ret_list).reshape(
                         -1, len(ret_list))
@@ -307,10 +300,7 @@ class TrainPipeline():
                 np.save(dir / 'training_data', training_data)
                 # check the performance of the current model,
                 # and save the model params
-                end_epoch = time.time()
-                elapsed = end_epoch - start_epoch
-                avg_time = elapsed * 1000
-                print("training epoch time {:.5f}ms".format(avg_time))
+
                 # if (i + 1) % self.check_freq == 0:
                 if ((i+1)*self.play_batch_size ) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
