@@ -172,7 +172,8 @@ def create_player(width,
 # plot the training data file
 def analyze(opt):
 
-    paths = re.split(r'\s*[,]\s*', opt.weights)
+    # paths = re.split(r'\s*[,]\s*', opt.weights)
+    paths = opt.weights
     num_path = len(paths)
     evaldata_list = []
     trainingdata_list = []
@@ -224,7 +225,7 @@ def analyze(opt):
     # score=con_evaldata[2]*con_evaldata[1]
     score = [a * b for a, b in zip(con_evaldata[2], con_evaldata[1])]
     print(opt.weights)
-    dirs = re.split(r',models\/|models\/', opt.weights)
+    dirs = [re.split(r',models\/|models\/', weight)[1] for weight in opt.weights]
     plt.subplot(2, 2, 2)
     plt.step(index, playout_num, where='post', label="playout")
     plt.plot(index, score, label="score")
@@ -372,6 +373,45 @@ def time_forward(opt):
         print("average forward time on {} is: {:.5f}ms, epoch number is: {}, batch num is: {}".format(
             device, avg_time, num_epoch, batch_num))
 
+def train_avestd(opt):
+    paths = opt.weights
+    num_path = len(paths)
+    evaldata_list = []
+    # trainingdata_list = []
+    for i in range(num_path):
+        cur_path = paths[i]
+        cur_path = Path(cur_path)
+        evaldata = np.load(cur_path / 'evaluate_data.npy')
+        # trainingdata = np.load(cur_path / 'training_data.npy')
+        evaldata_list.append(evaldata)
+
+
+    evaldata_list = [concate_evaldata_list([evaldata])for evaldata in evaldata_list]
+    test_list=[]
+    for evaldata in evaldata_list:
+        # print(evaldata)
+        index = evaldata[0]
+        playout_num = evaldata[1]
+        improve_list=[]
+        last_num=0
+        for i in range(len(playout_num)-1):
+            
+            if playout_num[i+1]>playout_num[i]:
+                # print("num of batch: {}, playout num: {}".format(index[i+1],playout_num[i+1]))
+                improve_list.append(index[i]-last_num)
+                last_num=index[i]
+        test_list.append(improve_list)
+    print(test_list)
+    num_of_test=len(test_list)
+    test_list_len=[len(test) for test in test_list]
+    min_len=np.min(test_list_len)
+    ave=[np.average([test_list[j][i] for j in range(num_of_test)]) for i in range(min_len)]
+    varianc=[np.std([test_list[j][i] for j in range(num_of_test)]) for i in range(min_len)]
+
+    print("average:",ave)
+    print("standart var:",varianc)
+    
+
 
 
 if __name__ == '__main__':
@@ -473,20 +513,32 @@ if __name__ == '__main__':
                         const=True,
                         default=False,
                         help='analyze training data or not, call default True')
-    parser.add_argument(
-        '--weights',
-        '-ws',
-        type=str,
-        default='',
-        help=
-        'take multiple weights paths, init empty, pharse several continuous path and analyze together'
-    )
+    # parser.add_argument(
+    #     '--weights',
+    #     '-ws',
+    #     type=str,
+    #     default='',
+    #     help=
+    #     'take multiple weights paths, init empty, pharse several continuous path and analyze together'
+    # )
+    parser.add_argument('--weights',
+                        '-ws',
+                        nargs='*',
+                        type=str,
+                        required=False,
+                        default='',
+                        help='depths of attention blocks, default empty')
     # training data analysis
     parser.add_argument('--timing',
                         nargs='?',
                         const=True,
                         default=False,
                         help='analyze forward time or not, call default True')
+    parser.add_argument('--train_avestd',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='analyze train data\'s average, std or not, call default True')
 
     opt = parser.parse_args()
 
@@ -496,3 +548,5 @@ if __name__ == '__main__':
         analyze(opt)
     if opt.timing:
         time_forward(opt)
+    if opt.train_avestd:
+        train_avestd(opt)

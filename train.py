@@ -14,8 +14,8 @@ from game import Board, Game
 import time
 import re
 import copy
-import multiprocessing as mp
-from multiprocessing import Pool
+import torch.multiprocessing as mp
+from torch.multiprocessing import Pool
 # from mcts_pure import MCTSPlayer as MCTS_Pure
 # from mcts_alphaZero import MCTSPlayer
 from MCTS import MCTSPlayer as MCTS_Pure
@@ -34,10 +34,7 @@ class TrainPipeline():
         self.board_width = opt.width  #default 6
         self.board_height = opt.width
         self.n_in_row = opt.number_in_row
-        self.board = Board(width=self.board_width,
-                           height=self.board_height,
-                           n_in_row=self.n_in_row)
-        self.game = Game(self.board)
+
         # training params
         self.learn_rate = opt.learn_rate
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
@@ -98,13 +95,18 @@ class TrainPipeline():
                                                    drop=opt.drop,
                                                    atten_cad_blk_num=atten_cad_blk_num))
             print("NEW policyvaluenet")
-        
+        self.board=[]
+        self.game=[]
         for i in range(self.process_num):
                 self.mcts_player.append ( MCTSPlayer(
-            policy_value_fn=self.policy_value_net[i].policy_value_fn,
-            c_puct=self.c_puct,
-            n_playout=self.n_playout,
-            is_selfplay=1))
+                    policy_value_fn=self.policy_value_net[i].policy_value_fn,
+                    c_puct=self.c_puct,
+                    n_playout=self.n_playout,
+                    is_selfplay=1))
+                self.board.append ( Board(width=self.board_width,
+                           height=self.board_height,
+                           n_in_row=self.n_in_row))
+                self.game.append ( Game(self.board[-1]))
         print("NEW Alpha mcts player")
 
     def get_equi_data(self, play_data):
@@ -132,7 +134,7 @@ class TrainPipeline():
     def collect_selfplay_data(self, mcts_player, n_games=1):
         """collect self-play data for training"""
         for i in range(n_games):
-            winner, play_data = self.game.start_self_play(mcts_player,
+            winner, play_data = self.game[0].start_self_play(mcts_player,
                                                           temp=self.temp)
             play_data = list(play_data)[:]
             self.episode_len = len(play_data)
@@ -144,7 +146,21 @@ class TrainPipeline():
         """collect self-play data for training"""
         print("start sub task")
         for i in range(n_games):
-            winner, play_data = self.game.start_self_play(mcts_player,
+            winner, play_data = self.game[0].start_self_play(mcts_player,
+                                                          temp=self.temp)
+            play_data = list(play_data)[:]
+            episode_len = len(play_data)
+            # augment the data
+            play_data = self.get_equi_data(play_data)
+            # self.data_buffer.extend(play_data)
+            que.put([episode_len,play_data])
+        print("end sub task")
+
+    def multip_collect_selfplay_data1(self, que, mcts_player, n_games=1):
+        """collect self-play data for training"""
+        print("start sub task")
+        for i in range(n_games):
+            winner, play_data = self.game[1].start_self_play(mcts_player,
                                                           temp=self.temp)
             play_data = list(play_data)[:]
             episode_len = len(play_data)
@@ -259,20 +275,26 @@ class TrainPipeline():
                     que = manager.Queue()
                     self.episode_len=0
                     print("start multi task")
-                    for n in range(2):
-                        p.apply_async(self.multip_collect_selfplay_data, args=(que,self.mcts_player[n], self.play_batch_size//2,))
+                    # for n in range(2):
+                    p.apply_async(self.multip_collect_selfplay_data, args=(que,self.mcts_player[0], self.play_batch_size//2,))
+                    p.apply_async(self.multip_collect_selfplay_data1, args=(que,self.mcts_player[1], self.play_batch_size//2,))
                     p.close()
                     p.join()
                     for n in range(2):
                         episode_len, play_data= que.get()
                         # augment the data
                         self.episode_len+=episode_len
+                        print("episode_len",episode_len)
                         self.data_buffer.extend(play_data)
                 else:
                     self.collect_selfplay_data(self.mcts_player[0],self.play_batch_size)
                 print("len of deque",len(self.data_buffer))
                 print("batch i:{}, episode_len:{}".format(
                     i*self.play_batch_size + 1, self.episode_len))
+                end_epoch = time.time()
+                elapsed = end_epoch - start_epoch
+                avg_time = elapsed * 1000
+                print("training epoch time {:.5f}ms".format(avg_time))
                 if len(self.data_buffer) > self.batch_size:
                     for n in range(self.play_batch_size):
                         ret_list = self.policy_update()
@@ -281,10 +303,10 @@ class TrainPipeline():
                         self.policy_value_net[1].policy_value_net.load_state_dict(copy.deepcopy(self.policy_value_net[0].policy_value_net.state_dict()))
                 else:
                     ret_list = [i*self.play_batch_size, 0, 0, 0, 0, 0, 0]
-                end_epoch = time.time()
-                elapsed = end_epoch - start_epoch
-                avg_time = elapsed * 1000
-                print("training epoch time {:.5f}ms".format(avg_time))
+                # end_epoch = time.time()
+                # elapsed = end_epoch - start_epoch
+                # avg_time = elapsed * 1000
+                # print("training epoch time {:.5f}ms".format(avg_time))
                 ret_list.insert(7, avg_time)
                 if training_data is None:
                     training_data = np.array(ret_list).reshape(
