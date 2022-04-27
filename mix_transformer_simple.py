@@ -36,11 +36,13 @@ class MixVisionTransformer(nn.Module):
                  norm_layer=nn.LayerNorm,
                  depths=[1, 1, 1, 1],
                  sr_ratios=[4, 2, 1, 1],
-                 atten_cad_blk_num=4):
+                 atten_cad_blk_num=4,
+                 parallel=True):
         super().__init__()
         self.num_classes = num_classes
         self.depths = depths
         self.blk_num=atten_cad_blk_num
+        self.parallel=parallel
         if self.blk_num != 3 and self.blk_num != 4:
             raise ValueError("only support block number 3 or 4")
         if self.blk_num == 3:
@@ -170,38 +172,70 @@ class MixVisionTransformer(nn.Module):
     def forward_features(self, x):
         B = x.shape[0]
         outs = []
+        if self.parallel:
+                # stage 1
+            x1, H, W = self.patch_embed1(x)
+            for i, blk in enumerate(self.block1):
+                x1 = blk(x, H, W)
+            # x = self.norm1(x)
+            x1 = x1.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            outs.append(x1)
 
-        # stage 1
-        x, H, W = self.patch_embed1(x)
-        for i, blk in enumerate(self.block1):
-            x = blk(x, H, W)
-        # x = self.norm1(x)
-        x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
-        outs.append(x)
+            # stage 2
+            x2, H, W = self.patch_embed2(x)
+            for i, blk in enumerate(self.block2):
+                x2 = blk(x2, H, W)
+            # x = self.norm2(x)
+            x2 = x2.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            outs.append(x2)
 
-        # stage 2
-        x, H, W = self.patch_embed2(x)
-        for i, blk in enumerate(self.block2):
-            x = blk(x, H, W)
-        # x = self.norm2(x)
-        x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
-        outs.append(x)
-
-        # stage 3
-        x, H, W = self.patch_embed3(x)
-        for i, blk in enumerate(self.block3):
-            x = blk(x, H, W)
-        # x = self.norm3(x)
-        x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
-        outs.append(x)
-        if self.blk_num == 4:
-            # stage 4
-            x, H, W = self.patch_embed4(x)
-            for i, blk in enumerate(self.block4):
+            # stage 3
+            x3, H, W = self.patch_embed3(x)
+            for i, blk in enumerate(self.block3):
+                x3 = blk(x3, H, W)
+            # x = self.norm3(x)
+            x3 = x3.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            outs.append(x3)
+            if self.blk_num == 4:
+                # stage 4
+                x4, H, W = self.patch_embed4(x)
+                for i, blk in enumerate(self.block4):
+                    x4 = blk(x4, H, W)
+                # x = self.norm4(x)
+                x4 = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+                outs.append(x4)
+        else:
+            # stage 1
+            x, H, W = self.patch_embed1(x)
+            for i, blk in enumerate(self.block1):
                 x = blk(x, H, W)
-            # x = self.norm4(x)
+            # x = self.norm1(x)
             x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
             outs.append(x)
+
+            # stage 2
+            x, H, W = self.patch_embed2(x)
+            for i, blk in enumerate(self.block2):
+                x = blk(x, H, W)
+            # x = self.norm2(x)
+            x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            outs.append(x)
+
+            # stage 3
+            x, H, W = self.patch_embed3(x)
+            for i, blk in enumerate(self.block3):
+                x = blk(x, H, W)
+            # x = self.norm3(x)
+            x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            outs.append(x)
+            if self.blk_num == 4:
+                # stage 4
+                x, H, W = self.patch_embed4(x)
+                for i, blk in enumerate(self.block4):
+                    x = blk(x, H, W)
+                # x = self.norm4(x)
+                x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+                outs.append(x)
 
         return outs
 
