@@ -25,7 +25,7 @@ class MixVisionTransformer(nn.Module):
                  patch_size=16,
                  in_chans=6,
                  num_classes=1,
-                 embed_dims=[32, 64, 128, 128],
+                 embed_dims=[32, 64, 64, 128],
                  num_heads=[2, 2, 2, 1],
                  mlp_ratios=[2, 2, 1, 1],
                  drop_rate=0.,
@@ -55,28 +55,54 @@ class MixVisionTransformer(nn.Module):
         print("attention cascad block num: ",self.blk_num)
         print("attention depth: ", depths)
         # patch_embed
-        self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
-                                              patch_size=3,
-                                              stride=1,
-                                              in_chans=in_chans,
-                                              embed_dim=embed_dims[0])
-        self.patch_embed2 = OverlapPatchEmbed(img_size=img_size[1],
-                                              patch_size=3,
-                                              stride=2,
-                                              in_chans=embed_dims[0],
-                                              embed_dim=embed_dims[1])
-        self.patch_embed3 = OverlapPatchEmbed(img_size=img_size[2],
-                                              patch_size=3,
-                                              stride=2,
-                                              in_chans=embed_dims[1],
-                                              embed_dim=embed_dims[2])
-        if self.blk_num == 4:
-            self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
-                                                  patch_size=3,
-                                                  stride=2,
-                                                  in_chans=embed_dims[2],
-                                                  embed_dim=embed_dims[3])
-
+        if self.parallel:
+            self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
+                                                patch_size=3,
+                                                stride=1,
+                                                in_chans=in_chans,
+                                                embed_dim=embed_dims[0])
+            self.conv2= nn.Conv2d(in_chans,embed_dims[0],kernel_size=3,stride=1,padding=1)
+            self.patch_embed2 = OverlapPatchEmbed(img_size=img_size[1],
+                                                patch_size=3,
+                                                stride=2,
+                                                in_chans=embed_dims[0],
+                                                embed_dim=embed_dims[1])
+            self.conv3= nn.Conv2d(in_chans,embed_dims[1],kernel_size=3,stride=2,padding=1)
+            self.patch_embed3 = OverlapPatchEmbed(img_size=img_size[2],
+                                                patch_size=3,
+                                                stride=2,
+                                                in_chans=embed_dims[1],
+                                                embed_dim=embed_dims[2])
+            if self.blk_num == 4:
+                self.conv4= nn.Conv2d(in_chans,embed_dims[2],kernel_size=5,stride=3,padding=1)
+                # nn.Conv2d(in_chans,embed_dims[2],kernel_size=5,stride=3,padding=1)
+                self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
+                                                    patch_size=3,
+                                                    stride=2,
+                                                    in_chans=embed_dims[2],
+                                                    embed_dim=embed_dims[3])
+        else:
+            self.patch_embed1 = OverlapPatchEmbed(img_size=img_size[0],
+                                                patch_size=3,
+                                                stride=1,
+                                                in_chans=in_chans,
+                                                embed_dim=embed_dims[0])
+            self.patch_embed2 = OverlapPatchEmbed(img_size=img_size[1],
+                                                patch_size=3,
+                                                stride=2,
+                                                in_chans=embed_dims[0],
+                                                embed_dim=embed_dims[1])
+            self.patch_embed3 = OverlapPatchEmbed(img_size=img_size[2],
+                                                patch_size=3,
+                                                stride=2,
+                                                in_chans=embed_dims[1],
+                                                embed_dim=embed_dims[2])
+            if self.blk_num == 4:
+                self.patch_embed4 = OverlapPatchEmbed(img_size=img_size[3],
+                                                    patch_size=3,
+                                                    stride=2,
+                                                    in_chans=embed_dims[2],
+                                                    embed_dim=embed_dims[3])
         # transformer encoder
         # dpr = [
         #     x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))
@@ -176,33 +202,42 @@ class MixVisionTransformer(nn.Module):
                 # stage 1
             x1, H, W = self.patch_embed1(x)
             for i, blk in enumerate(self.block1):
-                x1 = blk(x, H, W)
+                x1 = blk(x1, H, W)
             # x = self.norm1(x)
             x1 = x1.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            # print(x1.shape)
             outs.append(x1)
 
             # stage 2
-            x2, H, W = self.patch_embed2(x)
+            x2=self.conv2(x)
+            x2, H, W = self.patch_embed2(x2)
             for i, blk in enumerate(self.block2):
                 x2 = blk(x2, H, W)
             # x = self.norm2(x)
             x2 = x2.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            # print(x2.shape)
             outs.append(x2)
 
             # stage 3
-            x3, H, W = self.patch_embed3(x)
+            x3=self.conv3(x)
+            x3, H, W = self.patch_embed3(x3)
             for i, blk in enumerate(self.block3):
                 x3 = blk(x3, H, W)
             # x = self.norm3(x)
             x3 = x3.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+            # print(x3.shape)
             outs.append(x3)
             if self.blk_num == 4:
                 # stage 4
-                x4, H, W = self.patch_embed4(x)
+                x4=self.conv4(x)
+                # print(x4.shape)
+                x4, H, W = self.patch_embed4(x4)
+                # print(x4.shape)
                 for i, blk in enumerate(self.block4):
                     x4 = blk(x4, H, W)
                 # x = self.norm4(x)
-                x4 = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+                x4 = x4.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+                # print(x4.shape)
                 outs.append(x4)
         else:
             # stage 1
