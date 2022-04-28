@@ -25,7 +25,7 @@ class MixVisionTransformer(nn.Module):
                  patch_size=16,
                  in_chans=6,
                  num_classes=1,
-                 embed_dims=[32, 64, 64, 128],
+                 embed_dims=[32, 64, 128, 128],
                  num_heads=[2, 2, 2, 1],
                  mlp_ratios=[2, 2, 1, 1],
                  drop_rate=0.,
@@ -37,7 +37,7 @@ class MixVisionTransformer(nn.Module):
                  depths=[1, 1, 1, 1],
                  sr_ratios=[4, 2, 1, 1],
                  atten_cad_blk_num=4,
-                 parallel=True):
+                 parallel=False):
         super().__init__()
         self.num_classes = num_classes
         self.depths = depths

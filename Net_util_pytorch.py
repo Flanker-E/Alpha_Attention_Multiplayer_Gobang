@@ -130,11 +130,17 @@ class Net(nn.Module):
         self.board_height = board_height
         self.conv1 = nn.Conv2d(player_num * 2, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.attenblocks = nn.Sequential(
-            *(atten_num *
-              [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
+        self.attenblocks = nn.ModuleList([
+            Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4) for i in range(atten_num)
+        ])
+        # nn.Sequential(
+        #     *(atten_num *
+        #       [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.resblocks = nn.Sequential(*(res_num * [ResBlock(128, 128)]))
+        self.resblocks = nn.ModuleList([
+            ResBlock(128, 128) for i in range(res_num)
+        ])
+        # nn.Sequential(*(res_num * [ResBlock(128, 128)]))
         
 
         self.act_conv1 = nn.Conv2d(128, 4, kernel_size=1)
@@ -157,7 +163,9 @@ class Net(nn.Module):
                                         self.board_height)
         
         X = F.relu(self.conv3(X))
-        X = self.resblocks(X)
+        # X = self.resblocks(X)
+        for i, blk in enumerate(self.resblocks):
+                X = blk(X)
         
 
         act_x = F.relu(self.act_conv1(X))
