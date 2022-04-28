@@ -6,7 +6,8 @@ from torch.autograd import Variable
 import numpy as np
 from mix_transformer import *
 from mix_transformer_simple import MixVisionTransformer as MixSimple
-from swin_transformer import *
+# from swin_transformer import *
+from swin_mlp import *
 
 class PolicyValueNet(object):
     def __init__(self,
@@ -148,7 +149,7 @@ class Net(nn.Module):
         if self.swin_blk == False:
             self.attenblocks = nn.Sequential(*(atten_num * [Block(dim=64, num_heads=2, mlp_ratio=1, sr_ratio=4)]))
         else:
-            self.attenblocks = nn.Sequential(*(atten_num * [SwinTransformerBlock(dim=64, input_resolution = (8,8), num_heads=2, window_size = 2, mlp_ratio=1)]))
+            self.attenblocks = nn.Sequential(*(atten_num * [BasicLayer(dim=64, input_resolution = (8,8), depth=2, num_heads=2, window_size = 2)]))
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.resblocks = nn.Sequential(*(res_num * [ResBlock(128, 128)]))
         
