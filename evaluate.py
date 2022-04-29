@@ -388,6 +388,9 @@ def train_avestd(opt):
 
     evaldata_list = [concate_evaldata_list([evaldata])for evaldata in evaldata_list]
     test_list=[]
+    learned_num=0
+    notlearned_num=0
+    too_short=0
     for evaldata in evaldata_list:
         # print(evaldata)
         index = evaldata[0]
@@ -400,7 +403,16 @@ def train_avestd(opt):
                 # print("num of batch: {}, playout num: {}".format(index[i+1],playout_num[i+1]))
                 improve_list.append(index[i]-last_num)
                 last_num=index[i]
+        if len(improve_list)<2 :
+            if index[-1]>700:
+                notlearned_num+=1
+            else:
+                too_short+=1
+        else:
+            learned_num+=1
         test_list.append(improve_list)
+    print("learned num: {}, not learned num: {}, too short: {}".format(learned_num, notlearned_num,too_short))
+    print("learned ratio: ",learned_num/(learned_num+notlearned_num)*100,"%")
     print(test_list)
     num_of_test=len(test_list)
     test_list_len=[len(test) for test in test_list]
